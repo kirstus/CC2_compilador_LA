@@ -4,6 +4,8 @@ import math
 
 
 class laErrorHandler(ErrorListener):
+	def __init__(self,output):
+		self.output = output
 	def syntaxError(self, recognizer, o, line, column, msg, e):
 		value = o.text
 		message = msg
@@ -13,14 +15,19 @@ class laErrorHandler(ErrorListener):
 		print(line)
 		print(msg)
 		print(value)'''
+		#self.output.write("erorhandler\n")
 
 		if(message[0:10] == "mismatched"):
-			print("Linha " + str(line+1) + ": comentario nao fechado")
+			self.output.write("Linha " + str(line+1) + ": comentario nao fechado\n")
+			#print("Linha " + str(line+1) + ": comentario nao fechado")
 		elif(message[0:9] == "no viable"):
-			print("Linha " + str(line) + ": " + value + " - simbolo nao identificado")
+			self.output.write("Linha " + str(line) + ": " + value + " - simbolo nao identificado\n")
+			#print("Linha " + str(line) + ": " + value + " - simbolo nao identificado")
 		else:
-			print("Linha " + str(line) + ": erro sintatico proximo a " + value)
-		print("Fim da compilacao")
+			self.output.write("Linha " + str(line) + ": erro sintatico proximo a " + value + "\n")
+			#print("Linha " + str(line) + ": erro sintatico proximo a " + value)
+		self.output.write("Fim da compilacao\n")
+		#print("Fim da compilacao")
 		exit()
 		'''print("Line " + str(line) + ": ", end="")
 		if(value == "<EOF>" and message[0:10] == "mismatched"):

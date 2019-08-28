@@ -10,3 +10,10 @@ $ alias grun='java org.antlr.v4.gui.TestRig'
 
 Para gerar os arquivos necessários a partir da gramática:
 $ antlr4 -Dlanguage=Python3 -visitor
+
+Para rodar um caso de teste:
+$ python laCompiler.py caminho_do_teste caminho_da_saida
+
+Para rodar o corretor automático:
+$ java -jar CorretorTrabalho1.jar "python /home/matt/ufscar/CC2/T1/compilador_LA/laCompiler.py" "gcc" /tmp/ccc/ /home/matt/ufscar/CC2/T1/casosDeTesteT1/ "RAs" sintatico
+
