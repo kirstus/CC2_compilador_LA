@@ -17,7 +17,7 @@ $ alias grun='java org.antlr.v4.gui.TestRig'
 
 Para gerar os arquivos necessários a partir da gramática:
 
-$ antlr4 -Dlanguage=Python3 -visitor
+$ antlr4 -Dlanguage=Python3 -visitor la
 
 Para rodar um caso de teste:
 
