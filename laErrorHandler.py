@@ -11,11 +11,11 @@ class laErrorHandler(ErrorListener):
 		value = o.text
 		message = msg
 		symbols = []
-
+		extraneousSymbols = '"@!|'
 		if(message[0:20] == "mismatched input '{'"):
 			#print("Linha " + str(line+1) + ": comentario nao fechado")
 			self.output.write("Linha " + str(line+1) + ": comentario nao fechado\n")
-		elif(message[0:10] == "extraneous" and value == '"'):
+		elif(message[0:10] == "extraneous" and value in extraneousSymbols):
 			#print("Linha " + str(line) + ": " + value + " - simbolo nao identificado")
 			self.output.write("Linha " + str(line) + ": " + value + " - simbolo nao identificado\n")
 		else:
