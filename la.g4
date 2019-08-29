@@ -1,10 +1,5 @@
 grammar la;
 
-@lexer::members {
-def displayRecognitionError(self, tokenNames, e):
-	print(e)
-}
-
 programa: declaracoes 'algoritmo' corpo 'fim_algoritmo';
 
 declaracoes: decl_local_global*;
@@ -51,7 +46,7 @@ cmdAtribuicao: ('^')? identificador '<-' expressao;
 cmdChamada: IDENT '(' expressao (',' expressao)* ')';
 cmdRetorne: 'retorne' expressao;
 
-selecao: (item_selecao)*;
+selecao: (item_selecao)+;
 item_selecao: constantes ':' (cmd)*;
 
 constantes: numero_intervalo (',' numero_intervalo)*;
@@ -67,7 +62,7 @@ op1: '+' | '-';
 op2: '*' | '/';
 op3: '%';
 
-parcela: (op_unario | parcela_unario | parcela_nao_unario)?;
+parcela: (op_unario)? parcela_unario | parcela_nao_unario;
 
 parcela_unario: ('^')? identificador
 			  | IDENT '(' expressao (',' expressao)* ')'
@@ -79,7 +74,7 @@ parcela_nao_unario: '&' identificador | CADEIA;
 
 exp_relacional: exp_aritmetica (op_relacional exp_aritmetica)?;
 
-op_relacional: '=' | '<>' | '>=' | '<=' | '<=' | '>' | '<';
+op_relacional: '=' | '<>' | '>=' | '<=' | '>' | '<';
 			  
 expressao: termo_logico (op_logico_1 fator_logico)*;
 termo_logico: fator_logico (op_logico_2 fator_logico)*;

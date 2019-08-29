@@ -7,7 +7,7 @@ from laErrorHandler import laErrorHandler
 import argparse
 
 parser = argparse.ArgumentParser(description='Compiler for Python Machine Learning Models', add_help=True)
-#parser.add_argument('-f', '--file', dest='filepath', type=str, required=True)
+#parser.add_argument('-f','--file', dest='filepath', type=str, required=True)
 parser.add_argument('sourcefile', type=str)
 parser.add_argument('output', type=str)
 args = parser.parse_args()
@@ -31,4 +31,3 @@ stream = CommonTokenStream(lexer)
 parser = laParser(stream)
 parser._listeners = [laErrorHandler(saida)]
 tree = parser.programa()
-
