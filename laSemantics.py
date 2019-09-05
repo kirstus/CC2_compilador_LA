@@ -7,21 +7,30 @@ class laSemantics(laVisitor):
 	errors = ""
 
 	def visitPrograma(self, ctx:laParser.ProgramaContext):
-
+		self.visitDeclaracoes(ctx.declaracoes())
+		self.visitCorpo(ctx.corpo())
 
 	# Visit a parse tree produced by laParser#declaracoes.
 	def visitDeclaracoes(self, ctx:laParser.DeclaracoesContext):
-
+		for i in range(0, len(ctx.decl_local_global())):
+			self.visitDecl_local_global(ctx.decl_local_global(i))
 
 	# Visit a parse tree produced by laParser#decl_local_global.
 	def visitDecl_local_global(self, ctx:laParser.Decl_local_globalContext):
-
+		self.visitDeclaracao_local(ctx.declaracao_local())
+		self.visitDeclaracao_global(ctx.declaracao_global())
 
 	# Visit a parse tree produced by laParser#declaracao_local.
 	def visitDeclaracao_local(self, ctx:laParser.Declaracao_localContext):
+		if('declare' in ctx.getText()):
+			self.visitVariavel(ctx.variavel())
+		elif('constante' in ctx.getText()):
+			self.visitTipo_basico(ctx.tipo_basico())
+			self.visitValor_constante(ctx.valor_constante())
+		elif('tipo' in ctx.getText()):
+			self.visitTipo(ctx.TipoContext())
 
-
-	# Visit a parse tree produced by laParser#variavel.
+	'''# Visit a parse tree produced by laParser#variavel.
 	def visitVariavel(self, ctx:laParser.VariavelContext):
 
 
@@ -66,14 +75,15 @@ class laSemantics(laVisitor):
 
 
 	# Visit a parse tree produced by laParser#parametros.
-	def visitParametros(self, ctx:laParser.ParametrosContext):
+	def visitParametros(self, ctx:laParser.ParametrosContext):'''
 
 
 	# Visit a parse tree produced by laParser#corpo.
 	def visitCorpo(self, ctx:laParser.CorpoContext):
+		print("Teste")
 
 
-	# Visit a parse tree produced by laParser#cmd.
+	'''# Visit a parse tree produced by laParser#cmd.
 	def visitCmd(self, ctx:laParser.CmdContext):
 
 
@@ -202,4 +212,4 @@ class laSemantics(laVisitor):
 
 
 	# Visit a parse tree produced by laParser#op_logico_2.
-	def visitOp_logico_2(self, ctx:laParser.Op_logico_2Context):
+	def visitOp_logico_2(self, ctx:laParser.Op_logico_2Context):'''
