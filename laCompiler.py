@@ -4,6 +4,7 @@ from laListener import laListener
 from laParser import laParser
 from laVisitor import laVisitor
 from laErrorHandler import laErrorHandler
+from laSemantics import laSemantics
 import argparse
 
 parser = argparse.ArgumentParser(description='Compiler for Python Machine Learning Models', add_help=True)
@@ -31,3 +32,11 @@ stream = CommonTokenStream(lexer)
 parser = laParser(stream)
 parser._listeners = [laErrorHandler(saida)]
 tree = parser.programa()
+
+# Análise semântica
+semantic = laSemantics()
+semantic.visit(tree)
+
+if(semantic.errors):
+	print(semantic.errors)
+	exit()
