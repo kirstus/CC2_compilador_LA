@@ -8,17 +8,17 @@ from laSemantics import laSemantics
 import argparse
 
 parser = argparse.ArgumentParser(description='Compiler for Python Machine Learning Models', add_help=True)
-#parser.add_argument('-f','--file', dest='filepath', type=str, required=True)
-parser.add_argument('sourcefile', type=str)
-parser.add_argument('output', type=str)
+parser.add_argument('-f','--file', dest='filepath', type=str, required=True)
+#parser.add_argument('sourcefile', type=str)
+#parser.add_argument('output', type=str)
 args = parser.parse_args()
 
 #abrir arquivo de saída
-saida = open(args.output, "w+")
+#saida = open(args.output, "w+")
 
 # Parsear texto
-if(args.sourcefile != None):
-	text = FileStream(args.sourcefile, encoding = 'UTF-8')
+if(args.filepath != None):
+	text = FileStream(args.filepath, encoding = 'UTF-8')
 
 # Análise léxica
 try:
@@ -30,7 +30,7 @@ stream = CommonTokenStream(lexer)
 
 # Análise sintática
 parser = laParser(stream)
-parser._listeners = [laErrorHandler(saida)]
+parser._listeners = [laErrorHandler()]
 tree = parser.programa()
 
 # Análise semântica

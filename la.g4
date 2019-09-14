@@ -13,7 +13,7 @@ declaracao_local: 'declare' variavel
 
 variavel: identificador (',' identificador)* ':' tipo;
 identificador: IDENT ('.' IDENT)* dimensao;
-dimensao: ('[' exp_aritmetica ']')*;
+dimensao: '[' exp_aritmetica ']' dimensao | ;
 
 tipo: registro | tipo_estendido;
 
@@ -55,8 +55,9 @@ numero_intervalo: (op_unario)? NUM_INT ('..'(op_unario)? NUM_INT)?;
 
 op_unario: '-';
 
-exp_aritmetica: termo (op1 termo)*;
+exp_aritmetica: termo maisTermos;
 termo: fator (op2 fator)*;
+maisTermos: op1 termo maisTermos |;
 fator: parcela (op3 parcela)*;
 op1: '+' | '-';
 op2: '*' | '/';
