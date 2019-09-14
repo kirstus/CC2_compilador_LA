@@ -2,7 +2,7 @@ grammar la;
 
 programa: declaracoes 'algoritmo' corpo 'fim_algoritmo';
 
-declaracoes: decl_local_global*;
+declaracoes: decl_local_global declaracoes |;
 
 decl_local_global: declaracao_local | declaracao_global;
 
@@ -73,13 +73,19 @@ parcela_unario: ('^')? identificador
 
 parcela_nao_unario: '&' identificador | CADEIA;
 
-exp_relacional: exp_aritmetica (op_relacional exp_aritmetica)?;
+exp_relacional: exp_aritmetica exp_opcional;
+exp_opcional: op_relacional exp_aritmetica |;
 
 op_relacional: '=' | '<>' | '>=' | '<=' | '>' | '<';
 			  
-expressao: termo_logico (op_logico_1 fator_logico)*;
-termo_logico: fator_logico (op_logico_2 fator_logico)*;
+expressao: termo_logico maisTermosLogicos;
+
+termo_logico: fator_logico maisFatoresLogicos;
+maisTermosLogicos: op_logico_1 termo_logico maisTermosLogicos |;
+
 fator_logico: ('nao')? parcela_logica;
+maisFatoresLogicos: op_logico_2 fator_logico maisFatoresLogicos |;
+
 parcela_logica: ('verdadeiro' | 'falso')
 				| exp_relacional;
 op_logico_1: 'ou';
