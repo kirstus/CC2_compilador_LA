@@ -5,6 +5,8 @@ from laVisitor import laVisitor
 
 class laSemantics(laVisitor):
 	errors = ""
+	tabelaSimbolosVariaveis = {}
+	tabelaSimbolosFuncoes = {}
 
 	def visitPrograma(self, ctx:laParser.ProgramaContext):
 		self.visitDeclaracoes(ctx.declaracoes())
@@ -18,31 +20,38 @@ class laSemantics(laVisitor):
 	# Visit a parse tree produced by laParser#decl_local_global.
 	def visitDecl_local_global(self, ctx:laParser.Decl_local_globalContext):
 		self.visitDeclaracao_local(ctx.declaracao_local())
-		self.visitDeclaracao_global(ctx.declaracao_global())
+		self.VvisitDeclaracao_global(ctx.declaracao_global())
 
 	# Visit a parse tree produced by laParser#declaracao_local.
 	def visitDeclaracao_local(self, ctx:laParser.Declaracao_localContext):
 		if('declare' in ctx.getText()):
 			self.visitVariavel(ctx.variavel())
 		elif('constante' in ctx.getText()):
-			self.visitTipo_basico(ctx.tipo_basico())
-			self.visitValor_constante(ctx.valor_constante())
+			if(ctx.IDENT() not in tabelaSimbolosVariaveis.keys()):
+				self.visitTipo_basico(ctx.tipo_basico())
+				tabelaSimbolosVariaveis[ctx.IDENT().getText()] = ctx.tipo_basico().getText()
+				self.visitValor_constante(ctx.valor_constante())
+			else:
+				self.errors += "Linha " + str(ctx.start.line) + ": identificador " + str(ctx.IDENT().getText()) + " ja declarado anteriormente\n"
 		elif('tipo' in ctx.getText()):
 			self.visitTipo(ctx.TipoContext())
 
 	# Visit a parse tree produced by laParser#variavel.
 	def visitVariavel(self, ctx:laParser.VariavelContext):
+		print(ctx.getText())
 		for i in range(0, len(ctx.identificador())):
 			self.visitIdentificador(ctx.identificador(i))
 		self.visitTipo(ctx.tipo())
 
 	# Visit a parse tree produced by laParser#identificador.
 	def visitIdentificador(self, ctx:laParser.IdentificadorContext):
-		self.visitDimensao(ctx.dimensao)
+		self.visitDimensao(ctx.dimensao())
 
 	# Visit a parse tree produced by laParser#dimensao.
 	def visitDimensao(self, ctx:laParser.DimensaoContext):
-		self.visitExp_aritmetica(ctx.exp_aritmetica)
+		if(ctx.dimensao() != None):
+			self.visitExp_aritmetica(ctx.exp_aritmetica())
+			self.visitDimensao(ctx.dimensao())
 
 	# Visit a parse tree produced by laParser#tipo.
 	def visitTipo(self, ctx:laParser.TipoContext):
@@ -213,14 +222,12 @@ class laSemantics(laVisitor):
 
 	# Visit a parse tree produced by laParser#op_unario.
 	def visitOp_unario(self, ctx:laParser.Op_unarioContext):
-		print("Nada")
+		 return ctx.getText()
 
 	# Visit a parse tree produced by laParser#exp_aritmetica.
 	def visitExp_aritmetica(self, ctx:laParser.Exp_aritmeticaContext):
-		self.visitTermo(ctx.termo(0))
-		for i in range(0, len(ctx.op1())):
-			self.visitOp1(ctx.op1(i))
-			self.visitTermo(ctx.termo(i+1))
+		self.visitTermo(ctx.termo())
+		self.visitMaisTermos(ctx.maisTermos())
 
 	# Visit a parse tree produced by laParser#termo.
 	def visitTermo(self, ctx:laParser.TermoContext):
@@ -228,6 +235,13 @@ class laSemantics(laVisitor):
 		for i in range(0, len(ctx.op2())):
 			self.visitOp2(ctx.op2(i))
 			self.visitFator(ctx.fator(i+1))
+
+	# Visit a parse tree produced by laParser#maisTermos.
+	def visitMaisTermos(self, ctx:laParser.MaisTermosContext):
+		if(ctx.op1() != None):
+			self.visitOp1(ctx.op1())
+			self.visitTermo(ctx.termo())
+			self.visitMaisTermos(ctx.maisTermos())
 
 	# Visit a parse tree produced by laParser#fator.
 	def visitFator(self, ctx:laParser.FatorContext):
@@ -267,7 +281,7 @@ class laSemantics(laVisitor):
 
 	# Visit a parse tree produced by laParser#parcela_nao_unario.
 	def visitParcela_nao_unario(self, ctx:laParser.Parcela_nao_unarioContext):
-		if(ctx.identificador() != None):
+		if(ctx != None):
 			self.visitIdentificador(ctx.identificador())
 	
 	# Visit a parse tree produced by laParser#exp_relacional.
