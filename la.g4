@@ -13,6 +13,7 @@ variasDeclaracoesLocais: declaracao_local variasDeclaracoesLocais |;
 
 variavel: IDENT dimensao maisVariaveis ':' tipo;
 maisVariaveis: ',' IDENT dimensao maisVariaveis |;
+variasVariaveis: variavel variasVariaveis |;
 
 identificador: circunflexoOpcional IDENT dimensao maisIdentificadores;
 maisIdentificadores: '.' identificador |;
@@ -29,7 +30,7 @@ tipo_estendido: circunflexoOpcional tipo_basico_ident;
 
 valor_constante: CADEIA | NUM_INT | NUM_REAL | 'verdadeiro' | 'falso';
 
-registro: 'registro' variavel maisVariaveis 'fim_registro';
+registro: 'registro' variavel variasVariaveis 'fim_registro';
 
 declaracao_global: 'procedimento' IDENT '(' parametroOpcional ')' variasDeclaracoesLocais variosComandos 'fim_procedimento'
 				 | 'funcao' IDENT '(' parametroOpcional ')' ':' tipo_estendido variasDeclaracoesLocais variosComandos 'fim_funcao';
