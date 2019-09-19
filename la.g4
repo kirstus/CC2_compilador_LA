@@ -34,13 +34,15 @@ declaracao_global: 'procedimento' IDENT '(' (parametros)? ')' variasDeclaracoesL
 				 | 'funcao' IDENT '(' (parametros)? ')' ':' tipo_estendido variasDeclaracoesLocais variosComandos 'fim_funcao';
 
 parametro: varOpcional identificador maisIdentificadoresVirgula ':' tipo_estendido;
-parametros: parametro (',' parametro)*;
+parametros: parametro maisParametros;
+maisParametros: ',' parametro maisParametros |;
 
 corpo: variasDeclaracoesLocais (cmd)*;
 
 variosComandos: cmd variosComandos |;
 cmd: cmdLeia | cmdEscreva | cmdSe | cmdCaso | cmdPara | cmdEnquanto | cmdFaca | cmdAtribuicao | cmdChamada | cmdRetorne;
-cmdLeia: 'leia' '(' circunflexoOpcional identificador (',' circunflexoOpcional identificador)* ')';
+cmdLeia: 'leia' '(' circunflexoOpcional identificador cmdLeiaAtribuicao ')';
+cmdLeiaAtribuicao: ',' circunflexoOpcional identificador cmdLeiaAtribuicao |;
 cmdEscreva: 'escreva' '(' expressao (',' expressao)* ')';
 cmdSe: 'se' expressao 'entao' variosComandos ('senao' variosComandos)? 'fim_se';
 cmdCaso: 'caso' exp_aritmetica 'seja' selecao ('senao' variosComandos)? 'fim_caso';
@@ -54,7 +56,8 @@ cmdRetorne: 'retorne' expressao;
 selecao: (item_selecao)+;
 item_selecao: constantes ':' variosComandos;
 
-constantes: numero_intervalo (',' numero_intervalo)*;
+constantes: numero_intervalo maisConstantes;
+maisConstantes: ',' constantes |;
 
 numero_intervalo: (op_unario)? NUM_INT ('..'(op_unario)? NUM_INT)?;
 
