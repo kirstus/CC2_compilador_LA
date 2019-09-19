@@ -11,14 +11,12 @@ declaracao_local: 'declare' variavel
 				| 'tipo' IDENT ':' tipo;
 variasDeclaracoesLocais: declaracao_local variasDeclaracoesLocais |;
 
-variavel: IDENT dimensao maisVariaveis ':' tipo;
-maisVariaveis: ',' IDENT dimensao maisVariaveis |;
+variavel: identificador maisIdentificadoresVirgula ':' tipo;
 variasVariaveis: variavel variasVariaveis |;
 
-identificador: circunflexoOpcional IDENT dimensao maisIdentificadores;
-maisIdentificadores: '.' identificador |;
+identificador: IDENT maisIdentificadores dimensao;
+maisIdentificadores: '.' IDENT maisIdentificadores |;
 maisIdentificadoresVirgula: ',' identificador maisIdentificadoresVirgula |;
-
 dimensao: '[' exp_aritmetica ']' dimensao |;
 
 tipo: registro | tipo_estendido;
@@ -32,78 +30,60 @@ valor_constante: CADEIA | NUM_INT | NUM_REAL | 'verdadeiro' | 'falso';
 
 registro: 'registro' variavel variasVariaveis 'fim_registro';
 
-declaracao_global: 'procedimento' IDENT '(' parametroOpcional ')' variasDeclaracoesLocais variosComandos 'fim_procedimento'
-				 | 'funcao' IDENT '(' parametroOpcional ')' ':' tipo_estendido variasDeclaracoesLocais variosComandos 'fim_funcao';
+declaracao_global: 'procedimento' IDENT '(' (parametros)? ')' variasDeclaracoesLocais variosComandos 'fim_procedimento'
+				 | 'funcao' IDENT '(' (parametros)? ')' ':' tipo_estendido variasDeclaracoesLocais variosComandos 'fim_funcao';
 
-parametro: varOpcional identificador maisIdentificadoresVirgula ':' tipo_estendido maisParametros;
-parametroOpcional: parametro |;
-maisParametros: ',' parametro |;
+parametro: varOpcional identificador maisIdentificadoresVirgula ':' tipo_estendido;
+parametros: parametro (',' parametro)*;
 
-corpo: variasDeclaracoesLocais variosComandos;
+corpo: variasDeclaracoesLocais (cmd)*;
 
 variosComandos: cmd variosComandos |;
 cmd: cmdLeia | cmdEscreva | cmdSe | cmdCaso | cmdPara | cmdEnquanto | cmdFaca | cmdAtribuicao | cmdChamada | cmdRetorne;
-cmdLeia: 'leia' '(' lerComando ')';
-lerComando: circunflexoOpcional identificador lerMaisComandos;
-lerMaisComandos: ',' lerComando |;
-cmdEscreva: 'escreva' '(' expressao maisExpressoes ')';
-cmdSe: 'se' expressao 'entao' variosComandos senaoComandosOpcional 'fim_se';
-cmdCaso: 'caso' exp_aritmetica 'seja' selecao senaoComandosOpcional 'fim_caso';
+cmdLeia: 'leia' '(' circunflexoOpcional identificador (',' circunflexoOpcional identificador)* ')';
+cmdEscreva: 'escreva' '(' expressao (',' expressao)* ')';
+cmdSe: 'se' expressao 'entao' variosComandos ('senao' variosComandos)? 'fim_se';
+cmdCaso: 'caso' exp_aritmetica 'seja' selecao ('senao' variosComandos)? 'fim_caso';
 cmdPara: 'para' IDENT '<-' exp_aritmetica 'ate' exp_aritmetica 'faca' variosComandos 'fim_para';
 cmdEnquanto: 'enquanto' expressao 'faca' variosComandos 'fim_enquanto';
 cmdFaca: 'faca' variosComandos 'ate' expressao;
 cmdAtribuicao: circunflexoOpcional identificador '<-' expressao;
-cmdChamada: IDENT '(' expressao maisExpressoes ')';
+cmdChamada: IDENT '(' expressao (',' expressao)* ')';
 cmdRetorne: 'retorne' expressao;
 
-selecao: constantes ':' variosComandos maisSelecoes;
-maisSelecoes: selecao |;
+selecao: (item_selecao)+;
+item_selecao: constantes ':' variosComandos;
 
-constantes: numero_intervalo maisConstantes;
-maisConstantes: ',' constantes |;
+constantes: numero_intervalo (',' numero_intervalo)*;
 
-numero_intervalo: op_unario NUM_INT intervaloNumericoOpcional;
-intervaloNumericoOpcional: '..' op_unario NUM_INT |;
+numero_intervalo: (op_unario)? NUM_INT ('..'(op_unario)? NUM_INT)?;
 
-op_unario: '-' |;
+op_unario: '-';
 
-exp_aritmetica: termo maisTermos;
-
-termo: fator maisFatores;
-maisTermos: op1 termo maisTermos |;
-
-fator: parcela maisParcelas;
-maisFatores: op2 fator maisFatores |;
-
-parcela: op_unario parcela_unario | parcela_nao_unario;
-maisParcelas: op3 parcela maisParcelas |;
-
-parcela_unario: '^' IDENT maisIdentificadores dimensao
-			  | IDENT '(' expressao maisExpressoes ')'
-			  | NUM_INT
-			  | NUM_REAL
-			  | '(' expressao ')';
-
-parcela_nao_unario: '&' IDENT maisIdentificadores dimensao | CADEIA;
-
+exp_aritmetica: termo (op1 termo)*;
+termo: fator (op2 fator)*;
+fator: parcela (op3 parcela)*;
 op1: '+' | '-';
 op2: '*' | '/';
 op3: '%';
 
-exp_relacional: exp_aritmetica exp_opcional;
-exp_opcional: op_relacional exp_aritmetica |;
+parcela: (op_unario)? parcela_unario | parcela_nao_unario;
+
+parcela_unario: circunflexoOpcional identificador
+			  | IDENT '(' expressao (',' expressao)* ')'
+			  | NUM_INT
+			  | NUM_REAL
+			  | '(' expressao ')';
+
+parcela_nao_unario: '&' identificador | CADEIA;
+
+exp_relacional: exp_aritmetica (op_relacional exp_aritmetica)?;
 
 op_relacional: '=' | '<>' | '>=' | '<=' | '>' | '<';
 			  
-expressao: termo_logico maisTermosLogicos;
-maisExpressoes: ',' expressao maisExpressoes|;
-
-termo_logico: fator_logico maisFatoresLogicos;
-maisTermosLogicos: op_logico_1 termo_logico maisTermosLogicos |;
-
-fator_logico: naoOpcional parcela_logica;
-maisFatoresLogicos: op_logico_2 fator_logico maisFatoresLogicos |;
-
+expressao: termo_logico (op_logico_1 fator_logico)*;
+termo_logico: fator_logico (op_logico_2 fator_logico)*;
+fator_logico: 'nao' parcela_logica | parcela_logica;
 parcela_logica: ('verdadeiro' | 'falso')
 				| exp_relacional;
 op_logico_1: 'ou';
@@ -112,10 +92,8 @@ op_logico_2: 'e';
 NUM_INT: [0-9]+;
 NUM_REAL: [0-9]+'.'[0-9]+;
 
-circunflexoOpcional: '^' circunflexoOpcional |;
+circunflexoOpcional: '^' |;
 varOpcional: 'var' |;
-senaoComandosOpcional: 'senao' variosComandos |;
-naoOpcional: 'nao' |;
 IDENT: ([a-zA-Z] | '_')( [a-zA-Z] | [0-9] | '_')*;
 
 CADEIA: '"' ~('"')* '"';
