@@ -12,7 +12,7 @@ declaracao_local: 'declare' variavel
 				;
 
 variavel: primID=identificador (',' maisID+=identificador)* ':' tipo;
-identificador: primID=IDENT ('.' maisID+=IDENT)* dimensao;
+identificador: primIDIdent=IDENT ('.' maisIDIdent+=IDENT)* dimensao;
 dimensao: ('[' exp_aritmetica ']')*;
 
 tipo: registro | tipo_estendido;
@@ -76,7 +76,7 @@ exp_relacional: exp_aritmetica (op_relacional exp_aritmetica)?;
 
 op_relacional: '=' | '<>' | '>=' | '<=' | '>' | '<';
 			  
-expressao: termoLog=termo_logico (op_logico_1 maisTermoLog+=fator_logico)*;
+expressao: termoLog=termo_logico (op_logico_1 maisTermoLog+=termo_logico)*;
 termo_logico: fatLog=fator_logico (op_logico_2 maisFatLog+=fator_logico)*;
 fator_logico: ('nao')? parcela_logica;
 parcela_logica: ('verdadeiro' | 'falso')
