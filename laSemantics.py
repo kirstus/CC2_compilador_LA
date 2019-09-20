@@ -49,7 +49,11 @@ class laSemantics(laVisitor):
 	 # Visit a parse tree produced by laParser#variavel.
 	def visitVariavel(self, ctx:laParser.VariavelContext):
 		for i in range(0, len(ctx.identificador())):
-			self.visitIdentificador(ctx.identificador(i))
+			identName = self.visitIdentificador(ctx.identificador(i))
+			if(identName not in self.tabelaSimbolosVariaveis.keys()):
+				self.tabelaSimbolosVariaveis[identName] = 'variavel'
+			else:
+				self.errors += "Linha " + str(ctx.identificador(i).start.line) + ": identificador " + identName + " ja declarado anteriormente\n"
 		self.visitTipo(ctx.tipo())
 
 
@@ -59,7 +63,6 @@ class laSemantics(laVisitor):
 		identString = str(ctx.IDENT(0))
 		for i in range(1, len(ctx.IDENT())):
 			identString = identString + '.' + str(ctx.IDENT(i))	
-		print(identString)
 		self.visitDimensao(ctx.dimensao())
 		return identString
 
