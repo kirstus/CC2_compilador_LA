@@ -13,7 +13,7 @@ parser.add_argument('sourcefile', type=str)
 parser.add_argument('output', type=str)
 args = parser.parse_args()
 
-#abrir arquivo de saída
+#abrir arquivo de saída 
 saida = open(args.output, "w+")
 
 # Parsear texto
@@ -30,6 +30,7 @@ stream = CommonTokenStream(lexer)
 
 # Análise sintática
 parser = laParser(stream)
+#tratamento de erros sintáticos (implementado em laErrorHandler)
 parser._listeners = [laErrorHandler(saida)]
 tree = parser.programa()
 
@@ -37,8 +38,10 @@ tree = parser.programa()
 semantic = laSemantics()
 semantic.visit(tree)
 
+#abrir arquivo de saída semântica
 saida_semantic = open(args.output, "w+")
 
+#tratamento de erros semanticos (implementado em laSemantics)
 if(semantic.errors):
 	saida_semantic.write(semantic.errors)
 	saida_semantic.write("Fim da compilacao\n")

@@ -7,11 +7,12 @@ import math
 class laErrorHandler(ErrorListener):
 	def __init__(self, output):
 		self.output = output
-
+	#tratamento dos erros sintaticos
 	def syntaxError(self, recognizer, o, line, column, msg, e):
+		#condição ou caracter que gerou o erro sintático
 		value = o.text
+		#mapeia o tipo de erro sintático ou lexico que aparece
 		message = msg
-		symbols = []
 		extraneousSymbols = '"@!|'
 		if(message[0:20] == "mismatched input '{'"):
 			#print("Linha " + str(line+1) + ": comentario nao fechado")
