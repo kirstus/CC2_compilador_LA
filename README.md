@@ -21,5 +21,5 @@ Para rodar um caso de teste:
 
 Para rodar o corretor automático:
 
-`$ java -jar CorretorTrabalho1.jar "python /caminho/do/compilador_LA/laCompiler.py" "gcc" /caminho/da/pasta/de/saida/ /caminho/dos/casosDeTesteT1/ "RAs" sintatico`
+`$ java -jar CorretorTrabalho1.jar "python /caminho/do/compilador_LA/laCompiler.py" "gcc" /caminho/da/pasta/de/saida/ /caminho/dos/casosDeTesteT1/ "RAs" tudo`
 
