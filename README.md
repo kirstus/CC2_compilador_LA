@@ -16,9 +16,6 @@ Para usar o ANTLR4 com python3:
 Para gerar os arquivos necessários a partir da gramática:
 `$ antlr4 -Dlanguage=Python3 -visitor la`
 
-Para rodar um caso de teste:
-`$ python laCompiler.py caminho_do_teste caminho_da_saida`
-
 Para rodar o corretor automático:
 
 `$ java -jar CorretorTrabalho1.jar "python /caminho/do/compilador_LA/laCompiler.py" "gcc" /caminho/da/pasta/de/saida/ /caminho/dos/casosDeTesteT1/ "RAs" tudo`
