@@ -22,9 +22,9 @@ if(args.sourcefile != None):
 
 # Análise léxica
 try:
-    lexer = laLexer(text)
+	lexer = laLexer(text)
 except ParseCancellationException as pce:
-    msg = pce.get_message()
+	msg = pce.get_message()
 
 stream = CommonTokenStream(lexer)
 
@@ -37,6 +37,10 @@ tree = parser.programa()
 semantic = laSemantics()
 semantic.visit(tree)
 
+saida_semantic = open(args.output, "w+")
+
 if(semantic.errors):
+	saida_semantic.write(semantic.errors)
+	saida_semantic.write("Fim da compilacao\n")
 	print(semantic.errors)
 	exit()
