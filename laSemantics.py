@@ -5,86 +5,100 @@ from laVisitor import laVisitor
 import re #Regular expressions
 
 class laSemantics(laVisitor):
+	# variável que vai armazenar todos os erros da etapa semântica
 	errors = ""
 	tabelaSimbolosVariaveis = {}
 	tabelaSimbolosFuncoes = {}
+	# dicionário com simbolos já declarados
 	tabelaSimbolosVariaveisFuncoes = {}
 	tabelaSimbolosRetornoFuncoes = {}
 	tabelaSimbolosProcedimentos = {}
 
 	# Visit a parse tree produced by laParser#programa.
+	# gramática = programa: declaracoes 'algoritmo' corpo 'fim_algoritmo';
 	def visitPrograma(self, ctx:laParser.ProgramaContext):
 		self.visitDeclaracoes(ctx.declaracoes())
 		self.visitCorpo(ctx.corpo())
 
 
 	# Visit a parse tree produced by laParser#declaracoes.
+	# gramática = declaracoes: decl_local_global*;
 	def visitDeclaracoes(self, ctx:laParser.DeclaracoesContext):
 		for declLG in ctx.decl_local_global():
 			self.visitDecl_local_global(declLG)
 
 
 	# Visit a parse tree produced by laParser#decl_local_global.
+	# gramática = decl_local_global: declaracao_local | declaracao_global;
 	def visitDecl_local_global(self, ctx:laParser.Decl_local_globalContext):
 		if(ctx.declaracao_local() != None):
 			self.visitDeclaracao_local(ctx.declaracao_local())
 		elif(ctx.declaracao_global() != None):
 			self.visitDeclaracao_global(ctx.declaracao_global())
 
-	# Visit a parse tree produced by laParser#declaracao_local.
+	''' Visit a parse tree produced by laParser#declaracao_local.
+	declaracao_local: 'declare' variavel 
+				| 'constante' IDENT ':' tipo_basico '=' valor_constante
+				| 'tipo' IDENT ':' tipo;'''
 	def visitDeclaracao_local(self, ctx:laParser.Declaracao_localContext, isFunction = None):
 		if('declare' in ctx.getText()):
 			self.visitVariavel(ctx.variavel(), isFunction)
 		elif('constante' in ctx.getText()):
-			if(isFunction != None):
+			if(isFunction != None): # Se for uma função
+				# Se o identificador não tiver sido declarado ainda, adiciona ao dicionário de declarações dessa função
 				if(ctx.IDENT().getText() not in self.tabelaSimbolosVariaveisFuncoes[isFunction].keys()):
 					self.visitTipo_basico(ctx.tipo_basico())
 					self.tabelaSimbolosVariaveisFuncoes.update({isFunction: {ctx.IDENT().getText() : ctx.tipo_basico().getText()}})
 					self.visitValor_constante(ctx.valor_constante())
-				else:
+				else: #Se o identificador já tiver sido declarado, adiciona o erro à variável de erros
 					self.errors += "Linha " + str(ctx.start.line) + ": identificador " + ctx.IDENT().getText() + " ja declarado anteriormente\n"
-			else:
+			else: # Se não for uma função
+				# Se o identificador não tiver sido declarado ainda, adiciona ao dicionário de declarações
 				if(ctx.IDENT().getText() not in self.tabelaSimbolosVariaveis.keys()):
 					self.visitTipo_basico(ctx.tipo_basico())
 					self.tabelaSimbolosVariaveis[ctx.IDENT().getText()] = ctx.tipo_basico().getText()
 					self.visitValor_constante(ctx.valor_constante())
-				else:
+				else: #Se o identificador já tiver sido declarado, adiciona o erro à variável de erros
 					self.errors += "Linha " + str(ctx.start.line) + ": identificador " + ctx.IDENT().getText() + " ja declarado anteriormente\n"
 		elif('tipo' in ctx.getText()):
 			if(isFunction != None):
+				# Se o identificador não tiver sido declarado ainda, adiciona ao dicionário de declarações dessa função
 				if(ctx.IDENT().getText() not in self.tabelaSimbolosVariaveisFuncoes[isFunction].keys()):
 					self.tabelaSimbolosVariaveisFuncoes.update({isFunction: {ctx.IDENT().getText() : "tipo"}})
 					self.visitTipo(ctx.tipo())
-				else:
+				else: #Se o identificador já tiver sido declarado, adiciona o erro à variável de erros
 					self.errors += "Linha " + str(ctx.start.line) + ": identificador " + ctx.IDENT().getText() + " ja declarado anteriormente\n"
-			else:
+			else: # Se o identificador não tiver sido declarado ainda, adiciona ao dicionário de declarações
 				if(ctx.IDENT().getText() not in self.tabelaSimbolosVariaveis.keys()):
 					self.tabelaSimbolosVariaveis[ctx.IDENT().getText()] = "tipo"
 					self.visitTipo(ctx.tipo())
-				else:
+				else: #Se o identificador já tiver sido declarado, adiciona o erro à variável de erros
 					self.errors += "Linha " + str(ctx.start.line) + ": identificador " + ctx.IDENT().getText() + " ja declarado anteriormente\n"
 
 	 # Visit a parse tree produced by laParser#variavel.
+	 # variavel: primID=identificador (',' maisID+=identificador)* ':' tipo;
 	def visitVariavel(self, ctx:laParser.VariavelContext, isFunction = None):
 		for i in range(0, len(ctx.identificador())):
 			identName = self.visitIdentificador(ctx.identificador(i))
 			if(isFunction != None):
+				# Se o identificador não tiver sido declarado ainda, adiciona ao dicionário de declarações dessa função
 				if(identName not in self.tabelaSimbolosVariaveisFuncoes[isFunction].keys()):
 					tabelaKeys = self.tabelaSimbolosVariaveisFuncoes[isFunction]
 					tabelaKeys[identName] = ctx.tipo().getText()
 					self.tabelaSimbolosVariaveisFuncoes[isFunction] = tabelaKeys
-				else:
+				else: #Se o identificador já tiver sido declarado, adiciona o erro à variável de erros
 					self.errors += "Linha " + str(ctx.identificador(i).start.line) + ": identificador " + identName + " ja declarado anteriormente\n"
-			else:
+			else: # Se o identificador não tiver sido declarado ainda, adiciona ao dicionário de declarações
 				if(identName not in self.tabelaSimbolosVariaveis.keys()):
 					self.tabelaSimbolosVariaveis[identName] = ctx.tipo().getText()
-				else:
+				else: #Se o identificador já tiver sido declarado, adiciona o erro à variável de erros
 					self.errors += "Linha " + str(ctx.identificador(i).start.line) + ": identificador " + identName + " ja declarado anteriormente\n"
 		self.visitTipo(ctx.tipo())
 
 
 
 	# Visit a parse tree produced by laParser#identificador.
+	# gramática = identificador: primIDIdent=IDENT ('.' maisIDIdent+=IDENT)* dimensao;
 	def visitIdentificador(self, ctx:laParser.IdentificadorContext):
 		identString = str(ctx.IDENT(0))
 		for i in range(1, len(ctx.IDENT())):
@@ -94,12 +108,14 @@ class laSemantics(laVisitor):
 
 
 	# Visit a parse tree produced by laParser#dimensao.
+	# gramática = dimensao: ('[' exp_aritmetica ']')*;
 	def visitDimensao(self, ctx:laParser.DimensaoContext):
 		for expArit in ctx.exp_aritmetica():
 			self.visitExp_aritmetica(expArit)
 
 
 	# Visit a parse tree produced by laParser#tipo.
+	# gramática = tipo: registro | tipo_estendido;
 	def visitTipo(self, ctx:laParser.TipoContext):
 		if (ctx.registro() != None):
 			self.visitRegistro(ctx.registro())
@@ -108,15 +124,18 @@ class laSemantics(laVisitor):
 
 
 	# Visit a parse tree produced by laParser#tipo_basico.
+	# gramática = tipo_basico: 'literal' | 'inteiro' | 'real' | 'logico';
 	def visitTipo_basico(self, ctx:laParser.Tipo_basicoContext):
 		ctxText = ctx.getText()
+		# os tipos podem ser literal, inteiro, real ou lógico
 		if('literal' in ctxText or 'inteiro' in ctxText or 'real' in ctxText or 'logico' in ctxText):
 			return ctx.getText()
-		else:
+		else: # se não for nenhum desses, adiciona o erro a variavel de erros
 			self.errors += "Linha " + str(ctx.start.line) + ": tipo " + ctx.IDENT().getText() + " nao declarado\n"
 
 
 	# Visit a parse tree produced by laParser#tipo_basico_ident.
+	# gramática = tipo_basico_ident: tipo_basico | IDENT;
 	def visitTipo_basico_ident(self, ctx:laParser.Tipo_basico_identContext):
 		if(ctx.tipo_basico() != None):
 			return ctx.tipo_basico().getText()
@@ -127,28 +146,38 @@ class laSemantics(laVisitor):
 
 
 	# Visit a parse tree produced by laParser#tipo_estendido.
+	# gramática = tipo_estendido: ('^')? tipo_basico_ident;
 	def visitTipo_estendido(self, ctx:laParser.Tipo_estendidoContext):
+		# Remove o ^ da entrada e passa como parâmetro para o visitor de tipo basico
 		return self.visitTipo_basico_ident(ctx.tipo_basico_ident()).replace('^', '')
 
 
 	# Visit a parse tree produced by laParser#valor_constante.
+	# gramática = valor_constante: CADEIA | NUM_INT | NUM_REAL | 'verdadeiro' | 'falso';
 	def visitValor_constante(self, ctx:laParser.Valor_constanteContext):
 		return ctx.getText()
 
 
 	# Visit a parse tree produced by laParser#registro.
+	# gramática = registro: 'registro' (variavel)* 'fim_registro';
 	def visitRegistro(self, ctx:laParser.RegistroContext):
 		for var in ctx.variavel():
+			# Valida cada uma das variáveis do registro
 			self.visitVariavel(var)
 
 
-	# Visit a parse tree produced by laParser#declaracao_global.
+	''' Visit a parse tree produced by laParser#declaracao_global.
+	declaracao_global: 'procedimento' IDENT '(' (parametros)? ')' (declaracao_local)* (cmd)* 'fim_procedimento'
+				 | 'funcao' IDENT '(' (parametros)? ')' ':' tipo_estendido (declaracao_local)* (cmd)* 'fim_funcao';
+	'''
 	def visitDeclaracao_global(self, ctx:laParser.Declaracao_globalContext):
 		if('procedimento' in ctx.getText()):
+			# Verifica se o escopo é um procedimento e trata das declarações considerando isso
 			functionParameters = ''
 			if(ctx.parametros() != None):
 				self.visitParametros(ctx.parametros(), ctx.IDENT().getText())
 			if(ctx.IDENT().getText() not in self.tabelaSimbolosFuncoes.keys()):
+				# Adiciona a declaraçao ao dicionário de declarações de procedimentos
 				self.tabelaSimbolosProcedimentos[ctx.IDENT().getText()] = 'procedimento'
 				self.tabelaSimbolosVariaveis[ctx.IDENT().getText()] = 'procedimento'
 				self.tabelaSimbolosFuncoes[ctx.IDENT().getText()] = functionParameters
@@ -156,11 +185,12 @@ class laSemantics(laVisitor):
 				self.visitDeclaracao_local(declL, ctx.IDENT().getText())
 			for command in ctx.cmd():
 				self.visitCmd(command, ctx.IDENT().getText())
-		else:
+		else: # Se não é um procedimento, considera como função e trata das declarações considerando isso
 			functionParameters = ''
 			if(ctx.parametros() != None):
 				functionParameters = self.visitParametros(ctx.parametros(), ctx.IDENT().getText())
 			if(ctx.IDENT().getText() not in self.tabelaSimbolosFuncoes.keys()):
+				# Adiciona a declaraçao ao dicionário de declarações de funções
 				self.tabelaSimbolosFuncoes[ctx.IDENT().getText()] = functionParameters
 				self.tabelaSimbolosVariaveis[ctx.IDENT().getText()] = 'funcao'
 			self.visitTipo_estendido(ctx.tipo_estendido())
@@ -170,7 +200,9 @@ class laSemantics(laVisitor):
 			for command in ctx.cmd():
 				self.visitCmd(command, ctx.IDENT().getText())
 
+	
 	# Visit a parse tree produced by laParser#parametro.
+	# gramática = parametro: ('var')? primID=identificador (',' maisID+=identificador)* ':' tipo_estendido;
 	def visitParametro(self, ctx:laParser.ParametroContext, isFunction = None):
 		for identifier in ctx.identificador():
 			self.visitIdentificador(identifier)
@@ -185,6 +217,7 @@ class laSemantics(laVisitor):
 
 
 	# Visit a parse tree produced by laParser#parametros.
+	# gramática =  parametros: param=parametro (',' maisParam+=parametro)*;
 	def visitParametros(self, ctx:laParser.ParametrosContext, isFunction = None):
 		parametersArray = []
 		for parameter in ctx.parametro():
@@ -193,6 +226,7 @@ class laSemantics(laVisitor):
 
 
 	# Visit a parse tree produced by laParser#corpo.
+	# gramática = corpo: (declaracao_local)* (cmd)*;
 	def visitCorpo(self, ctx:laParser.CorpoContext):
 		for declL in ctx.declaracao_local():
 			self.visitDeclaracao_local(declL)
@@ -201,6 +235,7 @@ class laSemantics(laVisitor):
 
 
 	# Visit a parse tree produced by laParser#cmd.
+	# gramática = cmd: cmdLeia | cmdEscreva | cmdSe | cmdCaso | cmdPara | cmdEnquanto | cmdFaca | cmdAtribuicao | cmdChamada | cmdRetorne;
 	def visitCmd(self, ctx:laParser.CmdContext, isFunction = None):
 		if(ctx.cmdLeia() != None):
 			self.visitCmdLeia(ctx.cmdLeia(), isFunction)
@@ -225,6 +260,7 @@ class laSemantics(laVisitor):
 
 
 	# Visit a parse tree produced by laParser#cmdLeia.
+	# gramática = cmdLeia: 'leia' '(' ('^')? primID=identificador (',' ('^')? maisID+=identificador)* ')';
 	def visitCmdLeia(self, ctx:laParser.CmdLeiaContext, isFunction = None):
 		for identifier in ctx.identificador():
 			identificadores = identifier.getText().split('.')
@@ -241,12 +277,14 @@ class laSemantics(laVisitor):
 
 
 	# Visit a parse tree produced by laParser#cmdEscreva.
+	# gramática = cmdEscreva: 'escreva' '(' expr=expressao (',' naisExpr+=expressao)* ')';
 	def visitCmdEscreva(self, ctx:laParser.CmdEscrevaContext, isFunction = None):
 		for expression in ctx.expressao():
 			self.visitExpressao(expression, isFunction)
 
 
 	# Visit a parse tree produced by laParser#cmdSe.
+	# gramática =  cmdSe: 'se' expressao 'entao' (comandos+=cmd)* ('senao' (maisComandos+=cmd)*)? 'fim_se';
 	def visitCmdSe(self, ctx:laParser.CmdSeContext, isFunction = None):
 		self.visitExpressao(ctx.expressao(), isFunction)
 		for command in ctx.cmd():
@@ -254,6 +292,7 @@ class laSemantics(laVisitor):
 
 
 	# Visit a parse tree produced by laParser#cmdCaso.
+	# gramática = cmdCaso: 'caso' exp_aritmetica 'seja' selecao ('senao' (cmd)*)? 'fim_caso';
 	def visitCmdCaso(self, ctx:laParser.CmdCasoContext):
 		self.visitExp_aritmetica(ctx.exp_aritmetica())
 		self.visitSelecao(ctx.selecao())
@@ -262,6 +301,7 @@ class laSemantics(laVisitor):
 
 
 	# Visit a parse tree produced by laParser#cmdPara.
+	# gramática = cmdPara: 'para' IDENT '<-' exp_aritmetica 'ate' exp_aritmetica 'faca' (cmd)* 'fim_para';
 	def visitCmdPara(self, ctx:laParser.CmdParaContext):
 		self.visitExp_aritmetica(ctx.exp_aritmetica(0))
 		self.visitExp_aritmetica(ctx.exp_aritmetica(1))
@@ -269,6 +309,7 @@ class laSemantics(laVisitor):
 			self.visitCmd(command)
 
 	# Visit a parse tree produced by laParser#cmdEnquanto.
+	# gramática = cmdEnquanto: 'enquanto' expressao 'faca' (cmd)* 'fim_enquanto';
 	def visitCmdEnquanto(self, ctx:laParser.CmdEnquantoContext):
 		self.visitExpressao(ctx.expressao())
 		for command in ctx.cmd():
@@ -276,6 +317,7 @@ class laSemantics(laVisitor):
 
 
 	# Visit a parse tree produced by laParser#cmdFaca.
+	# gramática = cmdFaca: 'faca' (cmd)* 'ate' expressao;
 	def visitCmdFaca(self, ctx:laParser.CmdFacaContext, isFunction = None):
 		for command in ctx.cmd():
 			self.visitCmd(command, isFunction)
@@ -283,6 +325,7 @@ class laSemantics(laVisitor):
 
 
 	# Visit a parse tree produced by laParser#cmdAtribuicao.
+	# gramática = cmdAtribuicao: ('^')? identificador '<-' expressao;
 	def visitCmdAtribuicao(self, ctx:laParser.CmdAtribuicaoContext, isFunction):
 		self.visitIdentificador(ctx.identificador())
 		regex = re.compile(r'\[.*\]')
@@ -337,12 +380,14 @@ class laSemantics(laVisitor):
 							self.errors += "Linha " + str(ctx.start.line) + ": atribuicao nao compativel para " + ctx.identificador().getText() + '\n'
 
 	# Visit a parse tree produced by laParser#cmdChamada.
+	# gramática = cmdChamada: IDENT '(' expr=expressao (',' maisExpr+=expressao)* ')';
 	def visitCmdChamada(self, ctx:laParser.CmdChamadaContext):
 		for expression in ctx.expressao():
 			self.visitExpressao(expression)
 
 
 	# Visit a parse tree produced by laParser#cmdRetorne.
+	# gramática = cmdRetorne: 'retorne' expressao;
 	def visitCmdRetorne(self, ctx:laParser.CmdRetorneContext, isFunction = None):
 		if(isFunction == None or isFunction in self.tabelaSimbolosProcedimentos):
 			self.errors += "Linha " + str(ctx.start.line) + ": comando retorne nao permitido nesse escopo\n"
@@ -350,12 +395,14 @@ class laSemantics(laVisitor):
 
 
 	# Visit a parse tree produced by laParser#selecao.
+	# gramática = selecao: (item_selecao)+;
 	def visitSelecao(self, ctx:laParser.SelecaoContext):
 		for selection in ctx.item_selecao():
 			self.visitItem_selecao(selection)
 
 
 	# Visit a parse tree produced by laParser#item_selecao.
+	# gramática = item_selecao: constantes ':' (cmd)*;
 	def visitItem_selecao(self, ctx:laParser.Item_selecaoContext):
 		self.visitConstantes(ctx.constantes())
 		for command in ctx.cmd():
@@ -363,24 +410,28 @@ class laSemantics(laVisitor):
 
 
 	# Visit a parse tree produced by laParser#constantes.
+	# gramática = constantes: ni=numero_intervalo (',' maisNI+=numero_intervalo)*;
 	def visitConstantes(self, ctx:laParser.ConstantesContext):
 		for numInterval in ctx.numero_intervalo():
 			self.visitNumero_intervalo(numInterval)
 
 
 	# Visit a parse tree produced by laParser#numero_intervalo.
+	# gramática = numero_intervalo: (op_unario)? primNum=NUM_INT ('..'(op_unario)? segNum=NUM_INT)?;
 	def visitNumero_intervalo(self, ctx:laParser.Numero_intervaloContext):
 		for opUN in ctx.op_unario():
 			self.visitOp_unario(opUN)
 
 
 	# Visit a parse tree produced by laParser#op_unario.
+	# gramática = op_unario: '-';
 	def visitOp_unario(self, ctx:laParser.Op_unarioContext):
 		if (type(ctx) != None):
 			return ctx.getText()
 
 
 	# Visit a parse tree produced by laParser#exp_aritmetica.
+	# gramática = exp_aritmetica: primTermo=termo (op1 maisTermos+=termo)*;
 	def visitExp_aritmetica(self, ctx:laParser.Exp_aritmeticaContext, isFunction = None):
 		primTermoText = self.visitTermo(ctx.termo(0), isFunction)
 		for i in range(0, len(ctx.op1())):
@@ -392,6 +443,7 @@ class laSemantics(laVisitor):
 
 
 	# Visit a parse tree produced by laParser#termo.
+	# gramática = termo: primFator=fator (op2 maisFatores+=fator)*;
 	def visitTermo(self, ctx:laParser.TermoContext, isFunction = None):
 		fatorText = ''
 		fatorText = self.visitFator(ctx.fator(0), isFunction)
@@ -409,6 +461,7 @@ class laSemantics(laVisitor):
 
 
 	# Visit a parse tree produced by laParser#fator.
+	# gramática = fator: primParcela=parcela (op3 maisParcelas+=parcela)*;
 	def visitFator(self, ctx:laParser.FatorContext, isFunction = None):
 		parcelasText = ''
 		parcelaType = self.visitParcela(ctx.parcela(0), isFunction)
@@ -428,21 +481,25 @@ class laSemantics(laVisitor):
 
 
 	# Visit a parse tree produced by laParser#op1.
+	# gramática = op1: '+' | '-';
 	def visitOp1(self, ctx:laParser.Op1Context):
 		return ctx.getText()
 
 
 	# Visit a parse tree produced by laParser#op2.
+	# gramática = op2: '*' | '/';
 	def visitOp2(self, ctx:laParser.Op2Context):
 		return ctx.getText()
 
 
 	# Visit a parse tree produced by laParser#op3.
+	# gramática = op3: '%';
 	def visitOp3(self, ctx:laParser.Op3Context):
 		return ctx.getText()
 
 
 	# Visit a parse tree produced by laParser#parcela.
+	# gramática = parcela: (op_unario)? parcela_unario | parcela_nao_unario;
 	def visitParcela(self, ctx:laParser.ParcelaContext, isFunction = None):
 		if(ctx.parcela_unario() != None):
 			if(ctx.op_unario() != None):
@@ -452,7 +509,13 @@ class laSemantics(laVisitor):
 			return self.visitParcela_nao_unario(ctx.parcela_nao_unario())
 
 
-	# Visit a parse tree produced by laParser#parcela_unario.
+	''' Visit a parse tree produced by laParser#parcela_unario.
+	parcela_unario: ('^')? identificador
+			  | IDENT '(' expr=expressao (',' maisExpr+=expressao)* ')'
+			  | NUM_INT
+			  | NUM_REAL
+			  | '(' outraExpr=expressao ')';
+	'''
 	def visitParcela_unario(self, ctx:laParser.Parcela_unarioContext, isFunction = None):
 		if(ctx.identificador() != None):
 			identNameBefore = self.visitIdentificador(ctx.identificador())
@@ -494,6 +557,7 @@ class laSemantics(laVisitor):
 
 
 	# Visit a parse tree produced by laParser#parcela_nao_unario.
+	# gramática = parcela_nao_unario: '&' identificador | CADEIA;
 	def visitParcela_nao_unario(self, ctx:laParser.Parcela_nao_unarioContext):
 		if(ctx.identificador() != None):
 			self.visitIdentificador(ctx.identificador())
@@ -503,6 +567,7 @@ class laSemantics(laVisitor):
 
 
 	# Visit a parse tree produced by laParser#exp_relacional.
+	# gramática = exp_relacional: exp_aritmetica (op_relacional exp_aritmetica)?;
 	def visitExp_relacional(self, ctx:laParser.Exp_relacionalContext, isFunction = None):
 		expArit1 = self.visitExp_aritmetica(ctx.exp_aritmetica(0), isFunction)
 		if(ctx.op_relacional() != None):
@@ -516,11 +581,13 @@ class laSemantics(laVisitor):
 
 
 	# Visit a parse tree produced by laParser#op_relacional.
+	# gramática = op_relacional: '=' | '<>' | '>=' | '<=' | '>' | '<';
 	def visitOp_relacional(self, ctx:laParser.Op_relacionalContext):
 		return ctx.getText()
 
 
 	# Visit a parse tree produced by laParser#expressao.
+	# gramática = expressao: termoLog=termo_logico (op_logico_1 maisTermoLog+=termo_logico)*;
 	def visitExpressao(self, ctx:laParser.ExpressaoContext, isFunction = None):
 		primTermLog = self.visitTermo_logico(ctx.termo_logico(0), isFunction)
 		for i in range(0,len(ctx.op_logico_1())):
@@ -532,6 +599,7 @@ class laSemantics(laVisitor):
 
 
 	# Visit a parse tree produced by laParser#termo_logico.
+	# gramática = termo_logico: fatLog=fator_logico (op_logico_2 maisFatLog+=fator_logico)*;
 	def visitTermo_logico(self, ctx:laParser.Termo_logicoContext, isFunction = None):
 		primFatLog = self.visitFator_logico(ctx.fator_logico(0), isFunction)
 		for i in range(0,len(ctx.op_logico_2())):
@@ -543,6 +611,7 @@ class laSemantics(laVisitor):
 
 
 	# Visit a parse tree produced by laParser#fator_logico.
+	# gramática = fator_logico: ('nao')? parcela_logica;
 	def visitFator_logico(self, ctx:laParser.Fator_logicoContext, isFunction = None):
 		parLog = self.visitParcela_logica(ctx.parcela_logica(), isFunction)
 		if(parLog != None):
@@ -550,6 +619,7 @@ class laSemantics(laVisitor):
 
 
 	# Visit a parse tree produced by laParser#parcela_logica.
+	# parcela_logica: ('verdadeiro' | 'falso') | exp_relacional;
 	def visitParcela_logica(self, ctx:laParser.Parcela_logicaContext, isFunction = None):
 		if(ctx.exp_relacional() != None):
 			return self.visitExp_relacional(ctx.exp_relacional(), isFunction)
@@ -560,10 +630,12 @@ class laSemantics(laVisitor):
 
 
 	# Visit a parse tree produced by laParser#op_logico_1.
+	# gramática = op_logico_1: 'ou';
 	def visitOp_logico_1(self, ctx:laParser.Op_logico_1Context):
 		return ctx.getText()
 
 
 	# Visit a parse tree produced by laParser#op_logico_2.
+	# gramática = op_logico_2: 'e';
 	def visitOp_logico_2(self, ctx:laParser.Op_logico_2Context):
 		return ctx.getText()
