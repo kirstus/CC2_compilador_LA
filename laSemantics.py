@@ -141,6 +141,8 @@ class laSemantics(laVisitor):
 						v += "," + identName
 				else: #Se o identificador já tiver sido declarado, adiciona o erro à variável de erros
 					self.errors += "Linha " + str(ctx.identificador(i).start.line) + ": identificador " + identName + " ja declarado anteriormente\n"
+		if(ctx.primID.getText().find("[")!=-1):
+			v+= '['+ctx.primID.getText().split("[")[-1]
 		if(v!=""):
 			if(v[0]!=","):
 				self.codigo.append(v+"\n")
@@ -381,7 +383,10 @@ class laSemantics(laVisitor):
 							stringFormatos += self.formatos.get(self.tabelaSimbolosVariaveis.get(element,""),"%s")
 					else:
 						if(regex.sub('',element) in self.tabelaSimbolosVariaveis.keys()):
-							stringFormatos += self.formatos.get(self.tabelaSimbolosVariaveis[element],"")
+							if(element.find("[")!=-1):
+								stringFormatos += self.formatos.get(self.tabelaSimbolosVariaveis[element.split('[')[0]],"")
+							else:	
+								stringFormatos += self.formatos.get(self.tabelaSimbolosVariaveis[element],"")
 						elif(element.split("+")[0] in self.tabelaSimbolosVariaveis.keys() and element.split("+")[1] in self.tabelaSimbolosVariaveis.keys()):
 							stringFormatos += self.formatos.get(self.tabelaSimbolosVariaveis[element.split("+")[0]],"")
 						else: #funcoes
