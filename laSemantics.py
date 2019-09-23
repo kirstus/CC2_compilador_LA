@@ -248,9 +248,11 @@ class laSemantics(laVisitor):
 				self.visitCmd(command, ctx.IDENT().getText())
 			self.codigo.append("}\n")
 		else: # Se não é um procedimento, considera como função e trata das declarações considerando isso
+			self.codigo.append(self.tipos.get(ctx.tipo_estendido().getText())+" "+ ctx.IDENT().getText() +"(")
 			functionParameters = ''
 			if(ctx.parametros() != None):
 				functionParameters = self.visitParametros(ctx.parametros(), ctx.IDENT().getText())
+			self.codigo.append("){\n")
 			if(ctx.IDENT().getText() not in self.tabelaSimbolosFuncoes.keys()):
 				# Adiciona a declaraçao ao dicionário de declarações de funções
 				self.tabelaSimbolosFuncoes[ctx.IDENT().getText()] = functionParameters
@@ -261,6 +263,7 @@ class laSemantics(laVisitor):
 				self.visitDeclaracao_local(declL, ctx.IDENT().getText())
 			for command in ctx.cmd():
 				self.visitCmd(command, ctx.IDENT().getText())
+			self.codigo.append("}\n")
 
 	
 	# Visit a parse tree produced by laParser#parametro.
@@ -381,6 +384,8 @@ class laSemantics(laVisitor):
 							stringFormatos += self.formatos.get(self.tabelaSimbolosVariaveis[element],"")
 						elif(element.split("+")[0] in self.tabelaSimbolosVariaveis.keys() and element.split("+")[1] in self.tabelaSimbolosVariaveis.keys()):
 							stringFormatos += self.formatos.get(self.tabelaSimbolosVariaveis[element.split("+")[0]],"")
+						else: #funcoes
+							stringFormatos += self.formatos.get(self.tabelaSimbolosRetornoFuncoes.get(element.split('(')[0]),"")
 			argumentos += ", " + expression.getText()
 		self.codigo.append("printf(\""+stringFormatos+"\""+argumentos+");\n")
 
@@ -528,6 +533,7 @@ class laSemantics(laVisitor):
 		# Comando equivalente ao return do C
 		if(isFunction == None or isFunction in self.tabelaSimbolosProcedimentos):
 			self.errors += "Linha " + str(ctx.start.line) + ": comando retorne nao permitido nesse escopo\n"
+		self.codigo.append("return "+ctx.expressao().getText()+";\n")
 		self.visitExpressao(ctx.expressao(), isFunction)
 
 
