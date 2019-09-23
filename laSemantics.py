@@ -24,6 +24,14 @@ class laSemantics(laVisitor):
   		"logico": "%b"
 	}
 
+	operadores = {
+        '=': "==",
+        '<>': "!=",
+        "ou": "||",
+        "e": "&&",
+        "nao": "!"
+    }
+
 	tabelaSimbolosVariaveis = {}
 	tabelaSimbolosFuncoes = {}
 	# dicionário com simbolos já declarados
@@ -36,9 +44,9 @@ class laSemantics(laVisitor):
 	def visitPrograma(self, ctx:laParser.ProgramaContext):
 		self.codigo.append("#include <stdio.h>\n")
 		self.codigo.append("#include <stdlib.h>\n")
+		self.visitDeclaracoes(ctx.declaracoes())
 		self.codigo.append("\n")
 		self.codigo.append("int main() {\n")
-		self.visitDeclaracoes(ctx.declaracoes())
 		self.visitCorpo(ctx.corpo())
 		self.codigo.append("return 0;\n")
 		self.codigo.append("}\n")
@@ -81,6 +89,7 @@ class laSemantics(laVisitor):
 					self.visitTipo_basico(ctx.tipo_basico())
 					self.tabelaSimbolosVariaveis[ctx.IDENT().getText()] = ctx.tipo_basico().getText()
 					self.visitValor_constante(ctx.valor_constante())
+					self.codigo.append("#define "+ctx.IDENT().getText()+" "+ctx.valor_constante().getText())
 				else: #Se o identificador já tiver sido declarado, adiciona o erro à variável de erros
 					self.errors += "Linha " + str(ctx.start.line) + ": identificador " + ctx.IDENT().getText() + " ja declarado anteriormente\n"
 		elif('tipo' in ctx.getText()):
@@ -117,22 +126,22 @@ class laSemantics(laVisitor):
 				if(identName not in self.tabelaSimbolosVariaveis.keys()):
 					self.tabelaSimbolosVariaveis[identName] = ctx.tipo().getText()
 					if(ctx.tipo().getText().find('registro')!=-1):
-						v = self.tipos["registro"]+" "+identName+"{"
+						v = self.tipos["registro"]+" {"
 					else:
 						v += "," + identName
-						print(identName)
 				else: #Se o identificador já tiver sido declarado, adiciona o erro à variável de erros
 					self.errors += "Linha " + str(ctx.identificador(i).start.line) + ": identificador " + identName + " ja declarado anteriormente\n"
 		if(v!=""):
 			if(v[0]!=","):
 				self.codigo.append(v+"\n")
 			else:
-				v.replace(",","",1)
+				v = v.replace(",","",1)
+				ponteiro = "*" if ctx.tipo().getText()[0]=="^" else ""
 				if(ctx.tipo().getText()=="literal"):
-					self.codigo.append(self.tipos.get(ctx.tipo().getText().replace("^", ""),"")+" "+identName+"[100];\n")
+					self.codigo.append(self.tipos.get(ctx.tipo().getText().replace("^", ""),"")+ponteiro+" "+v+"[100];\n")
 				else:
-					self.codigo.append(self.tipos.get(ctx.tipo().getText().replace("^", ""),"")+" "+identName+";\n")
-		self.visitTipo(ctx.tipo())
+					self.codigo.append(self.tipos.get(ctx.tipo().getText().replace("^", ""),"")+ponteiro+" "+v+";\n")
+		self.visitTipo(ctx.tipo(),identName)
 
 
 
@@ -155,9 +164,9 @@ class laSemantics(laVisitor):
 
 	# Visit a parse tree produced by laParser#tipo.
 	# gramática = tipo: registro | tipo_estendido;
-	def visitTipo(self, ctx:laParser.TipoContext):
+	def visitTipo(self, ctx:laParser.TipoContext, identName=None):
 		if (ctx.registro() != None):
-			self.visitRegistro(ctx.registro())
+			self.visitRegistro(ctx.registro(),identName)
 		else:
 			self.visitTipo_estendido(ctx.tipo_estendido())
 
@@ -199,11 +208,11 @@ class laSemantics(laVisitor):
 
 	# Visit a parse tree produced by laParser#registro.
 	# gramática = registro: 'registro' (variavel)* 'fim_registro';
-	def visitRegistro(self, ctx:laParser.RegistroContext):
+	def visitRegistro(self, ctx:laParser.RegistroContext, identName):
 		for var in ctx.variavel():
 			# Valida cada uma das variáveis do registro
 			self.visitVariavel(var)
-		self.codigo.append("};\n")
+		self.codigo.append("} "+identName+";\n")
 
 
 	''' Visit a parse tree produced by laParser#declaracao_global.
@@ -353,6 +362,8 @@ class laSemantics(laVisitor):
 					else:
 						if(regex.sub('',element) in self.tabelaSimbolosVariaveis.keys()):
 							stringFormatos += self.formatos.get(self.tabelaSimbolosVariaveis[element],"")
+						elif(element.split("+")[0] in self.tabelaSimbolosVariaveis.keys() and element.split("+")[1] in self.tabelaSimbolosVariaveis.keys()):
+							stringFormatos += self.formatos.get(self.tabelaSimbolosVariaveis[element.split("+")[0]],"")
 			argumentos += ", " + expression.getText()
 		self.codigo.append("printf(\""+stringFormatos+"\""+argumentos+");\n")
 
@@ -360,43 +371,60 @@ class laSemantics(laVisitor):
 	# Visit a parse tree produced by laParser#cmdSe.
 	# gramática =  cmdSe: 'se' expressao 'entao' (comandos+=cmd)* ('senao' (maisComandos+=cmd)*)? 'fim_se';
 	def visitCmdSe(self, ctx:laParser.CmdSeContext, isFunction = None):
-		
+		expr_se = ctx.expressao().getText()
+		expr_se = re.sub("=","==", expr_se)
+		self.codigo.append("if("+expr_se+"){\n")
 		self.visitExpressao(ctx.expressao(), isFunction)
-		for command in ctx.cmd():
+		for command in ctx.comandos:
 			self.visitCmd(command, isFunction)
+		if(ctx.maisComandos!=None):
+			self.codigo.append("}else{\n")
+		for command in ctx.maisComandos:
+			self.visitCmd(command, isFunction)
+		self.codigo.append("}\n")
 
 
 	# Visit a parse tree produced by laParser#cmdCaso.
 	# gramática = cmdCaso: 'caso' exp_aritmetica 'seja' selecao ('senao' (cmd)*)? 'fim_caso';
 	def visitCmdCaso(self, ctx:laParser.CmdCasoContext):
+		self.codigo.append("switch (" + ctx.exp_aritmetica().getText()+ ") {")
 		self.visitExp_aritmetica(ctx.exp_aritmetica())
 		self.visitSelecao(ctx.selecao())
+		self.codigo.append("default: \n")
 		for command in ctx.cmd():
 			self.visitCmd(command)
+		self.codigo.append("}\n")
 
 
 	# Visit a parse tree produced by laParser#cmdPara.
 	# gramática = cmdPara: 'para' IDENT '<-' exp_aritmetica 'ate' exp_aritmetica 'faca' (cmd)* 'fim_para';
 	def visitCmdPara(self, ctx:laParser.CmdParaContext):
+		self.codigo.append("for("+ctx.IDENT().getText()+" = "+ctx.exp_aritmetica(0).getText()+ ";")
+		self.codigo.append(ctx.IDENT().getText()+" <= "+ctx.exp_aritmetica(1).getText()+ ";"+ctx.IDENT().getText()+"++) {\n")
 		self.visitExp_aritmetica(ctx.exp_aritmetica(0))
 		self.visitExp_aritmetica(ctx.exp_aritmetica(1))
 		for command in ctx.cmd():
 			self.visitCmd(command)
+		self.codigo.append("}\n")
 
 	# Visit a parse tree produced by laParser#cmdEnquanto.
 	# gramática = cmdEnquanto: 'enquanto' expressao 'faca' (cmd)* 'fim_enquanto';
 	def visitCmdEnquanto(self, ctx:laParser.CmdEnquantoContext):
+		self.codigo.append("while("+ctx.expressao().getText()+") {\n")
 		self.visitExpressao(ctx.expressao())
 		for command in ctx.cmd():
 			self.visitCmd(command)
+		self.codigo.append("}\n")
 
 
 	# Visit a parse tree produced by laParser#cmdFaca.
 	# gramática = cmdFaca: 'faca' (cmd)* 'ate' expressao;
 	def visitCmdFaca(self, ctx:laParser.CmdFacaContext, isFunction = None):
+		self.codigo.append("do{\n")
 		for command in ctx.cmd():
 			self.visitCmd(command, isFunction)
 		self.visitExpressao(ctx.expressao(), isFunction)
+		self.codigo.append("}while("+ctx.expressao().getText().replace("nao","!").replace("=","==")+");\n")
 
 
 	# Visit a parse tree produced by laParser#cmdAtribuicao.
@@ -453,6 +481,11 @@ class laSemantics(laVisitor):
 								self.errors += "Linha " + str(ctx.start.line) + ": atribuicao nao compativel para " + ctx.identificador().getText() + '\n'
 						else:
 							self.errors += "Linha " + str(ctx.start.line) + ": atribuicao nao compativel para " + ctx.identificador().getText() + '\n'
+				if(self.tabelaSimbolosVariaveis[identifier]=='literal'):
+					self.codigo.append("strcpy("+ctx.identificador().getText()+", "+ctx.expressao().getText()+");\n")
+				else:
+					self.codigo.append(ctx.getText().replace("<-","=").replace("^","*")+";\n")
+
 
 	# Visit a parse tree produced by laParser#cmdChamada.
 	# gramática = cmdChamada: IDENT '(' expr=expressao (',' maisExpr+=expressao)* ')';
@@ -480,8 +513,15 @@ class laSemantics(laVisitor):
 	# gramática = item_selecao: constantes ':' (cmd)*;
 	def visitItem_selecao(self, ctx:laParser.Item_selecaoContext):
 		self.visitConstantes(ctx.constantes())
+
+		n = ctx.constantes().getText().split('..')
+		if(len(n)==1):
+			n.append(n[0])
+		for i in range(int(n[0]),int(n[1])+1):
+			self.codigo.append("case "+str(i)+":\n")
 		for command in ctx.cmd():
 			self.visitCmd(command)
+			self.codigo.append("break;\n")
 
 
 	# Visit a parse tree produced by laParser#constantes.
@@ -658,7 +698,7 @@ class laSemantics(laVisitor):
 	# Visit a parse tree produced by laParser#op_relacional.
 	# gramática = op_relacional: '=' | '<>' | '>=' | '<=' | '>' | '<';
 	def visitOp_relacional(self, ctx:laParser.Op_relacionalContext):
-		return ctx.getText()
+		return self.operadores.get(ctx.getText(),"")
 
 
 	# Visit a parse tree produced by laParser#expressao.
@@ -707,10 +747,10 @@ class laSemantics(laVisitor):
 	# Visit a parse tree produced by laParser#op_logico_1.
 	# gramática = op_logico_1: 'ou';
 	def visitOp_logico_1(self, ctx:laParser.Op_logico_1Context):
-		return ctx.getText()
+		return self.operadores.get(ctx.getText(),"")
 
 
 	# Visit a parse tree produced by laParser#op_logico_2.
 	# gramática = op_logico_2: 'e';
 	def visitOp_logico_2(self, ctx:laParser.Op_logico_2Context):
-		return ctx.getText()
+		return self.operadores.get(ctx.getText(),"")
