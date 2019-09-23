@@ -7,7 +7,9 @@ import re #Regular expressions
 class laSemantics(laVisitor):
 	# variável que vai armazenar todos os erros da etapa semântica
 	errors = ""
+	# Array de equivalência de códigos C
 	codigo = []
+	# Equivalencia de tipos C
 	tipos = {
   		"literal": "char*",
   		"inteiro": "int",
@@ -16,14 +18,14 @@ class laSemantics(laVisitor):
   		"registro": "struct",
   		"tipo":	"typedef"
 	}
-
+	# Equivalencia de referencia de tipos C
 	formatos = {
   		"literal": "%s",
   		"inteiro": "%d",
   		"real": "%f",
   		"logico": "%b"
 	}
-
+	# Equivalencia de operadores C
 	operadores = {
         '=': "==",
         '<>': "!=",
@@ -31,12 +33,15 @@ class laSemantics(laVisitor):
         "e": "&&",
         "nao": "!"
     }
-
+    # Dicionario com simbolos declarados globalmente
 	tabelaSimbolosVariaveis = {}
+	# Dicionário com nomes das funções declaradas
 	tabelaSimbolosFuncoes = {}
-	# dicionário com simbolos já declarados
+	# Dicionario com simbolos declarados dentro de funções
 	tabelaSimbolosVariaveisFuncoes = {}
+	# Dicionario com simbolos de retorno de funções
 	tabelaSimbolosRetornoFuncoes = {}
+	# Dicionario com simbolos de procedimentos declarados
 	tabelaSimbolosProcedimentos = {}
 
 	# Visit a parse tree produced by laParser#programa.
@@ -295,6 +300,7 @@ class laSemantics(laVisitor):
 	# Visit a parse tree produced by laParser#cmd.
 	# gramática = cmd: cmdLeia | cmdEscreva | cmdSe | cmdCaso | cmdPara | cmdEnquanto | cmdFaca | cmdAtribuicao | cmdChamada | cmdRetorne;
 	def visitCmd(self, ctx:laParser.CmdContext, isFunction = None):
+		# visitors de todos os comandos
 		if(ctx.cmdLeia() != None):
 			self.visitCmdLeia(ctx.cmdLeia(), isFunction)
 		if(ctx.cmdEscreva() != None):
@@ -320,6 +326,7 @@ class laSemantics(laVisitor):
 	# Visit a parse tree produced by laParser#cmdLeia.
 	# gramática = cmdLeia: 'leia' '(' ('^')? primID=identificador (',' ('^')? maisID+=identificador)* ')';
 	def visitCmdLeia(self, ctx:laParser.CmdLeiaContext, isFunction = None):
+		#Comando Equivalente ao SCANF do C
 		stringFormatos = ""
 		argumentos = ""
 		for identifier in ctx.identificador():
@@ -354,6 +361,7 @@ class laSemantics(laVisitor):
 	# Visit a parse tree produced by laParser#cmdEscreva.
 	# gramática = cmdEscreva: 'escreva' '(' expr=expressao (',' naisExpr+=expressao)* ')';
 	def visitCmdEscreva(self, ctx:laParser.CmdEscrevaContext, isFunction = None):
+		# Comando Equivalente ao PRINTF do C
 		stringFormatos = ""
 		argumentos = ""
 		for expression in ctx.expressao():
@@ -380,6 +388,7 @@ class laSemantics(laVisitor):
 	# Visit a parse tree produced by laParser#cmdSe.
 	# gramática =  cmdSe: 'se' expressao 'entao' (comandos+=cmd)* ('senao' (maisComandos+=cmd)*)? 'fim_se';
 	def visitCmdSe(self, ctx:laParser.CmdSeContext, isFunction = None):
+		# Comando equivalente ao IF ELSE do C
 		expr_se = ctx.expressao().getText()
 		expr_se = re.sub("=","==", expr_se)
 		self.codigo.append("if("+expr_se+"){\n")
@@ -396,6 +405,7 @@ class laSemantics(laVisitor):
 	# Visit a parse tree produced by laParser#cmdCaso.
 	# gramática = cmdCaso: 'caso' exp_aritmetica 'seja' selecao ('senao' (cmd)*)? 'fim_caso';
 	def visitCmdCaso(self, ctx:laParser.CmdCasoContext):
+		# Comando equivalente ao SWITCH do C
 		self.codigo.append("switch (" + ctx.exp_aritmetica().getText()+ ") {")
 		self.visitExp_aritmetica(ctx.exp_aritmetica())
 		self.visitSelecao(ctx.selecao())
@@ -408,6 +418,7 @@ class laSemantics(laVisitor):
 	# Visit a parse tree produced by laParser#cmdPara.
 	# gramática = cmdPara: 'para' IDENT '<-' exp_aritmetica 'ate' exp_aritmetica 'faca' (cmd)* 'fim_para';
 	def visitCmdPara(self, ctx:laParser.CmdParaContext):
+		# Comando equivalente ao FOR do C
 		self.codigo.append("for("+ctx.IDENT().getText()+" = "+ctx.exp_aritmetica(0).getText()+ ";")
 		self.codigo.append(ctx.IDENT().getText()+" <= "+ctx.exp_aritmetica(1).getText()+ ";"+ctx.IDENT().getText()+"++) {\n")
 		self.visitExp_aritmetica(ctx.exp_aritmetica(0))
@@ -419,6 +430,7 @@ class laSemantics(laVisitor):
 	# Visit a parse tree produced by laParser#cmdEnquanto.
 	# gramática = cmdEnquanto: 'enquanto' expressao 'faca' (cmd)* 'fim_enquanto';
 	def visitCmdEnquanto(self, ctx:laParser.CmdEnquantoContext):
+		# Comando equivalente ao WHILE do C
 		self.codigo.append("while("+ctx.expressao().getText()+") {\n")
 		self.visitExpressao(ctx.expressao())
 		for command in ctx.cmd():
@@ -429,6 +441,7 @@ class laSemantics(laVisitor):
 	# Visit a parse tree produced by laParser#cmdFaca.
 	# gramática = cmdFaca: 'faca' (cmd)* 'ate' expressao;
 	def visitCmdFaca(self, ctx:laParser.CmdFacaContext, isFunction = None):
+		# Comando equivalente ao DO WHILE do C
 		self.codigo.append("do{\n")
 		for command in ctx.cmd():
 			self.visitCmd(command, isFunction)
@@ -439,6 +452,7 @@ class laSemantics(laVisitor):
 	# Visit a parse tree produced by laParser#cmdAtribuicao.
 	# gramática = cmdAtribuicao: ('^')? identificador '<-' expressao;
 	def visitCmdAtribuicao(self, ctx:laParser.CmdAtribuicaoContext, isFunction):
+		# Comando equivalente a amarração de tipo do C
 		self.visitIdentificador(ctx.identificador())
 		regex = re.compile(r'\[.*\]')
 		identifier = regex.sub('',ctx.identificador().getText().split('.')[-1])
@@ -494,9 +508,11 @@ class laSemantics(laVisitor):
 					self.codigo.append("strcpy("+ ctx.identificador().getText()+", "+ ctx.expressao().getText()+ ");\n")
 				else:
 					self.codigo.append(ctx.getText().replace("<-","=").replace("^","*")+";\n")
+	
 	# Visit a parse tree produced by laParser#cmdChamada.
 	# gramática = cmdChamada: IDENT '(' expr=expressao (',' maisExpr+=expressao)* ')';
 	def visitCmdChamada(self, ctx:laParser.CmdChamadaContext):
+		# Comando chamada de função
 		self.codigo.append(ctx.IDENT().getText()+"(")
 		for expression in ctx.expressao():
 			self.codigo.append(expression.getText())
@@ -509,6 +525,7 @@ class laSemantics(laVisitor):
 	# Visit a parse tree produced by laParser#cmdRetorne.
 	# gramática = cmdRetorne: 'retorne' expressao;
 	def visitCmdRetorne(self, ctx:laParser.CmdRetorneContext, isFunction = None):
+		# Comando equivalente ao return do C
 		if(isFunction == None or isFunction in self.tabelaSimbolosProcedimentos):
 			self.errors += "Linha " + str(ctx.start.line) + ": comando retorne nao permitido nesse escopo\n"
 		self.visitExpressao(ctx.expressao(), isFunction)
@@ -517,6 +534,7 @@ class laSemantics(laVisitor):
 	# Visit a parse tree produced by laParser#selecao.
 	# gramática = selecao: (item_selecao)+;
 	def visitSelecao(self, ctx:laParser.SelecaoContext):
+		# Se for uma opção válida, segue fluxo
 		for selection in ctx.item_selecao():
 			self.visitItem_selecao(selection)
 
@@ -524,6 +542,7 @@ class laSemantics(laVisitor):
 	# Visit a parse tree produced by laParser#item_selecao.
 	# gramática = item_selecao: constantes ':' (cmd)*;
 	def visitItem_selecao(self, ctx:laParser.Item_selecaoContext):
+		# Equivalente ao comando CASE do C
 		self.visitConstantes(ctx.constantes())
 
 		n = ctx.constantes().getText().split('..')
@@ -557,6 +576,11 @@ class laSemantics(laVisitor):
 			return ctx.getText()
 
 
+	# Ordem de precedência é igual a (da maior para a menor)
+	# % –(operador unário)
+	# / *
+	# + –(operador binário)
+
 	# Visit a parse tree produced by laParser#exp_aritmetica.
 	# gramática = exp_aritmetica: primTermo=termo (op1 maisTermos+=termo)*;
 	def visitExp_aritmetica(self, ctx:laParser.Exp_aritmeticaContext, isFunction = None):
@@ -579,10 +603,12 @@ class laSemantics(laVisitor):
 			fatorText2 = self.visitFator(ctx.fator(i+1), isFunction)
 			if(fatorText2 != fatorText):
 				if((fatorText == 'real' or fatorText == 'inteiro') and (fatorText2 == 'real' or fatorText2 == 'inteiro')):
+					# Se um dos fatores for real, o resultado é real
 					if(fatorText == 'real' or fatorText2 == 'real'):
 						return 'real'
-					else:
+					else: # Se não, o resultado é inteiro
 						return 'inteiro'
+				# Se o tipo de ambos os fatores não forem reais ou inteiros, não é possível realizar essa operação com esse tipo
 				fatorText = "errorType"
 		return fatorText
 
@@ -599,10 +625,12 @@ class laSemantics(laVisitor):
 			parcelasType2 = self.visitParcela(ctx.parcela(i+1), isFunction)
 			if(parcelasType2 != parcelasText):
 				if((parcelasText == 'real' or parcelasText == 'inteiro') and (parcelasText2 == 'real' or parcelasText2 == 'inteiro')):
+					# Se uma das parcelas for real, o resultado é real
 					if(parcelasText == 'real' or parcelasText2 == 'real'):
 						return 'real'
-					else:
+					else: # Se não, o resuldado é inteiro
 						return 'inteiro'
+				# Se o tipo de ambas as parcelas não forem reais ou inteiros, não é possível realizar essa operação com esse tipo
 				parcelasText = "errorType"
 		return parcelasText
 
@@ -610,18 +638,21 @@ class laSemantics(laVisitor):
 	# Visit a parse tree produced by laParser#op1.
 	# gramática = op1: '+' | '-';
 	def visitOp1(self, ctx:laParser.Op1Context):
+		# Soma e subtração
 		return ctx.getText()
 
 
 	# Visit a parse tree produced by laParser#op2.
 	# gramática = op2: '*' | '/';
 	def visitOp2(self, ctx:laParser.Op2Context):
+		# Multiplicação e divisão
 		return ctx.getText()
 
 
 	# Visit a parse tree produced by laParser#op3.
 	# gramática = op3: '%';
 	def visitOp3(self, ctx:laParser.Op3Context):
+		# Módulo
 		return ctx.getText()
 
 
@@ -649,11 +680,14 @@ class laSemantics(laVisitor):
 			identName = identNameBefore.split('.')
 			isErrorType = False
 			for element in identName:
+				# Se for uma função
 				if(isFunction != None):
+					# Se o elemento não estiver na tabela de simbolos de função, ela não foi declarada
 					if(element not in self.tabelaSimbolosVariaveisFuncoes[isFunction].keys() and element not in self.tabelaSimbolosVariaveis.keys()):
 						self.errors += "Linha " + str(ctx.identificador().start.line) + ": identificador " + identNameBefore + " nao declarado\n"
 						isErrorType = True
-				else:
+				else: # Se naõ for função
+					# Se o elemento não estiver na tabela de simbolos, ela não foi declarada
 					if(element not in self.tabelaSimbolosVariaveis.keys()):
 						self.errors += "Linha " + str(ctx.identificador().start.line) + ": identificador " + identNameBefore + " nao declarado\n"
 						isErrorType = True
@@ -700,6 +734,7 @@ class laSemantics(laVisitor):
 		if(ctx.op_relacional() != None):
 			self.visitOp_relacional(ctx.op_relacional())
 			expArit2 = self.visitExp_aritmetica(ctx.exp_aritmetica(1), isFunction)
+			# As expressões precisam ser do mesmo tipo para serem comparadas logicamente
 			if(expArit1 != expArit2):
 				return 'errorType'
 			else:
@@ -720,6 +755,7 @@ class laSemantics(laVisitor):
 		for i in range(0,len(ctx.op_logico_1())):
 			self.visitOp_logico_1(ctx.op_logico_1(i))
 			outroTermLog = self.visitTermo_logico(ctx.termo_logico(i+1), isFunction)
+			# Os termos precisam ser do mesmo tipo para serem comparados logicamente
 			if( primTermLog != outroTermLog ):
 				return "errorType"
 		return primTermLog
@@ -732,6 +768,7 @@ class laSemantics(laVisitor):
 		for i in range(0,len(ctx.op_logico_2())):
 			self.visitOp_logico_2(ctx.op_logico_2(i))
 			outroFatLog = self.visitFator_logico(ctx.fator_logico(i+1), isFunction)
+			# Os fatores precisam ser do mesmo tipo para serem comparados logicamente
 			if( primFatLog != outroFatLog ):
 				return "errorType"
 		return primFatLog
@@ -759,10 +796,12 @@ class laSemantics(laVisitor):
 	# Visit a parse tree produced by laParser#op_logico_1.
 	# gramática = op_logico_1: 'ou';
 	def visitOp_logico_1(self, ctx:laParser.Op_logico_1Context):
+		# Equivalente ao ||
 		return self.operadores.get(ctx.getText(),"")
 
 
 	# Visit a parse tree produced by laParser#op_logico_2.
 	# gramática = op_logico_2: 'e';
 	def visitOp_logico_2(self, ctx:laParser.Op_logico_2Context):
+		# Equivalente ao &&
 		return self.operadores.get(ctx.getText(),"")
