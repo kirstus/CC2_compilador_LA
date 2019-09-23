@@ -9,7 +9,7 @@ class laSemantics(laVisitor):
 	errors = ""
 	codigo = []
 	tipos = {
-  		"literal": "char",
+  		"literal": "char*",
   		"inteiro": "int",
   		"real": "float",
   		"logico": "bool",
@@ -104,7 +104,12 @@ class laSemantics(laVisitor):
 				if(ctx.IDENT().getText() not in self.tabelaSimbolosVariaveis.keys()):
 					self.tabelaSimbolosVariaveis[ctx.IDENT().getText()] = "tipo"
 					self.tipos[ctx.IDENT().getText()] = ctx.IDENT().getText()
-					self.visitTipo(ctx.tipo())
+					if(ctx.tipo().getText().find('registro')!=-1):
+						t = self.tipos["registro"]+" {"
+					else:
+						t = self.tipos.get(ctx.tipo().getText(),"")
+					self.codigo.append("typedef "+t)
+					self.visitTipo(ctx.tipo(),ctx.IDENT().getText())
 				else: #Se o identificador já tiver sido declarado, adiciona o erro à variável de erros
 					self.errors += "Linha " + str(ctx.start.line) + ": identificador " + ctx.IDENT().getText() + " ja declarado anteriormente\n"
 
@@ -164,7 +169,7 @@ class laSemantics(laVisitor):
 
 	# Visit a parse tree produced by laParser#tipo.
 	# gramática = tipo: registro | tipo_estendido;
-	def visitTipo(self, ctx:laParser.TipoContext, identName=None):
+	def visitTipo(self, ctx:laParser.TipoContext, identName=""):
 		if (ctx.registro() != None):
 			self.visitRegistro(ctx.registro(),identName)
 		else:
@@ -208,7 +213,7 @@ class laSemantics(laVisitor):
 
 	# Visit a parse tree produced by laParser#registro.
 	# gramática = registro: 'registro' (variavel)* 'fim_registro';
-	def visitRegistro(self, ctx:laParser.RegistroContext, identName):
+	def visitRegistro(self, ctx:laParser.RegistroContext, identName=""):
 		for var in ctx.variavel():
 			# Valida cada uma das variáveis do registro
 			self.visitVariavel(var)
@@ -221,10 +226,12 @@ class laSemantics(laVisitor):
 	'''
 	def visitDeclaracao_global(self, ctx:laParser.Declaracao_globalContext):
 		if('procedimento' in ctx.getText()):
+			self.codigo.append("void "+ ctx.IDENT().getText() +"(")
 			# Verifica se o escopo é um procedimento e trata das declarações considerando isso
 			functionParameters = ''
 			if(ctx.parametros() != None):
 				self.visitParametros(ctx.parametros(), ctx.IDENT().getText())
+			self.codigo.append("){\n")
 			if(ctx.IDENT().getText() not in self.tabelaSimbolosFuncoes.keys()):
 				# Adiciona a declaraçao ao dicionário de declarações de procedimentos
 				self.tabelaSimbolosProcedimentos[ctx.IDENT().getText()] = 'procedimento'
@@ -234,6 +241,7 @@ class laSemantics(laVisitor):
 				self.visitDeclaracao_local(declL, ctx.IDENT().getText())
 			for command in ctx.cmd():
 				self.visitCmd(command, ctx.IDENT().getText())
+			self.codigo.append("}\n")
 		else: # Se não é um procedimento, considera como função e trata das declarações considerando isso
 			functionParameters = ''
 			if(ctx.parametros() != None):
@@ -254,6 +262,7 @@ class laSemantics(laVisitor):
 	# gramática = parametro: ('var')? primID=identificador (',' maisID+=identificador)* ':' tipo_estendido;
 	def visitParametro(self, ctx:laParser.ParametroContext, isFunction = None):
 		for identifier in ctx.identificador():
+			self.codigo.append(self.tipos.get(ctx.tipo_estendido().getText(),"")+ " "+identifier.getText())
 			self.visitIdentificador(identifier)
 			if (isFunction != None):
 				if(isFunction not in self.tabelaSimbolosVariaveisFuncoes.keys()):
@@ -358,7 +367,7 @@ class laSemantics(laVisitor):
 					if(isFunction != None):
 						identFunction = regex.sub('',element)
 						if(identFunction in self.tabelaSimbolosVariaveisFuncoes[isFunction].keys() or identFunction in self.tabelaSimbolosVariaveis.keys()):					
-							a=0#stringFormatos += self.formatos.get(self.tabelaSimbolosVariaveis[element],"")
+							stringFormatos += self.formatos.get(self.tabelaSimbolosVariaveis.get(element,""),"%s")
 					else:
 						if(regex.sub('',element) in self.tabelaSimbolosVariaveis.keys()):
 							stringFormatos += self.formatos.get(self.tabelaSimbolosVariaveis[element],"")
@@ -482,16 +491,19 @@ class laSemantics(laVisitor):
 						else:
 							self.errors += "Linha " + str(ctx.start.line) + ": atribuicao nao compativel para " + ctx.identificador().getText() + '\n'
 				if(self.tabelaSimbolosVariaveis[identifier]=='literal'):
-					self.codigo.append("strcpy("+ctx.identificador().getText()+", "+ctx.expressao().getText()+");\n")
+					self.codigo.append("strcpy("+ ctx.identificador().getText()+", "+ ctx.expressao().getText()+ ");\n")
 				else:
 					self.codigo.append(ctx.getText().replace("<-","=").replace("^","*")+";\n")
-
-
 	# Visit a parse tree produced by laParser#cmdChamada.
 	# gramática = cmdChamada: IDENT '(' expr=expressao (',' maisExpr+=expressao)* ')';
 	def visitCmdChamada(self, ctx:laParser.CmdChamadaContext):
+		self.codigo.append(ctx.IDENT().getText()+"(")
 		for expression in ctx.expressao():
+			self.codigo.append(expression.getText())
+			self.codigo.append(",")
 			self.visitExpressao(expression)
+		self.codigo.pop()
+		self.codigo.append(");\n")
 
 
 	# Visit a parse tree produced by laParser#cmdRetorne.
