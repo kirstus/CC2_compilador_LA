@@ -7,6 +7,23 @@ import re #Regular expressions
 class laSemantics(laVisitor):
 	# variável que vai armazenar todos os erros da etapa semântica
 	errors = ""
+	codigo = []
+	tipos = {
+  		"literal": "char",
+  		"inteiro": "int",
+  		"real": "float",
+  		"logico": "bool",
+  		"registro": "struct",
+  		"tipo":	"typedef"
+	}
+
+	formatos = {
+  		"literal": "%c",
+  		"inteiro": "%d",
+  		"real": "%f",
+  		"logico": "%b"
+	}
+
 	tabelaSimbolosVariaveis = {}
 	tabelaSimbolosFuncoes = {}
 	# dicionário com simbolos já declarados
@@ -17,8 +34,14 @@ class laSemantics(laVisitor):
 	# Visit a parse tree produced by laParser#programa.
 	# gramática = programa: declaracoes 'algoritmo' corpo 'fim_algoritmo';
 	def visitPrograma(self, ctx:laParser.ProgramaContext):
+		self.codigo.append("#include <stdio.h>\n")
+		self.codigo.append("#include <stdlib.h>\n")
+		self.codigo.append("\n")
+		self.codigo.append("int main() {\n")
 		self.visitDeclaracoes(ctx.declaracoes())
 		self.visitCorpo(ctx.corpo())
+		self.codigo.append("return 0;\n")
+		self.codigo.append("}\n")
 
 
 	# Visit a parse tree produced by laParser#declaracoes.
@@ -71,6 +94,7 @@ class laSemantics(laVisitor):
 			else: # Se o identificador não tiver sido declarado ainda, adiciona ao dicionário de declarações
 				if(ctx.IDENT().getText() not in self.tabelaSimbolosVariaveis.keys()):
 					self.tabelaSimbolosVariaveis[ctx.IDENT().getText()] = "tipo"
+					self.tipos[ctx.IDENT().getText()] = ctx.IDENT().getText()
 					self.visitTipo(ctx.tipo())
 				else: #Se o identificador já tiver sido declarado, adiciona o erro à variável de erros
 					self.errors += "Linha " + str(ctx.start.line) + ": identificador " + ctx.IDENT().getText() + " ja declarado anteriormente\n"
@@ -78,6 +102,7 @@ class laSemantics(laVisitor):
 	 # Visit a parse tree produced by laParser#variavel.
 	 # variavel: primID=identificador (',' maisID+=identificador)* ':' tipo;
 	def visitVariavel(self, ctx:laParser.VariavelContext, isFunction = None):
+		v = ""
 		for i in range(0, len(ctx.identificador())):
 			identName = self.visitIdentificador(ctx.identificador(i))
 			if(isFunction != None):
@@ -91,8 +116,20 @@ class laSemantics(laVisitor):
 			else: # Se o identificador não tiver sido declarado ainda, adiciona ao dicionário de declarações
 				if(identName not in self.tabelaSimbolosVariaveis.keys()):
 					self.tabelaSimbolosVariaveis[identName] = ctx.tipo().getText()
+					if(ctx.tipo().getText().find('registro')!=-1):
+						v = self.tipos["registro"]+" "+identName+"{"
+					else:
+						v += "," + identName
+						print(identName)
 				else: #Se o identificador já tiver sido declarado, adiciona o erro à variável de erros
 					self.errors += "Linha " + str(ctx.identificador(i).start.line) + ": identificador " + identName + " ja declarado anteriormente\n"
+		#self.codigo.append(self.tipos[ctx.tipo().getText().replace("^", "")]+" "+identName+";")
+		if(v!=""):
+			if(v[0]!=","):
+				self.codigo.append(v+"\n")
+			else:
+				v.replace(",","",1)
+				self.codigo.append(self.tipos.get(ctx.tipo().getText().replace("^", ""),"")+" "+identName+";\n")
 		self.visitTipo(ctx.tipo())
 
 
@@ -164,6 +201,7 @@ class laSemantics(laVisitor):
 		for var in ctx.variavel():
 			# Valida cada uma das variáveis do registro
 			self.visitVariavel(var)
+		self.codigo.append("};\n")
 
 
 	''' Visit a parse tree produced by laParser#declaracao_global.
@@ -262,25 +300,55 @@ class laSemantics(laVisitor):
 	# Visit a parse tree produced by laParser#cmdLeia.
 	# gramática = cmdLeia: 'leia' '(' ('^')? primID=identificador (',' ('^')? maisID+=identificador)* ')';
 	def visitCmdLeia(self, ctx:laParser.CmdLeiaContext, isFunction = None):
+		stringFormatos = ""
+		argumentos = ""
 		for identifier in ctx.identificador():
 			identificadores = identifier.getText().split('.')
 			regex = re.compile(r'\[.*\]')
+			args = ", "
 			for element in identificadores:
 				if(isFunction != None):
 					identFunction = regex.sub('',element)
 					if(identFunction not in self.tabelaSimbolosVariaveisFuncoes[isFunction].keys() and identFunction not in self.tabelaSimbolosVariaveis.keys()):
 						self.errors += "Linha " + str(ctx.start.line) + ": identificador " + identifier.getText() + " nao declarado\n"
+					else:						
+						#stringFormatos += self.formatos.get(self.tabelaSimbolosVariaveisFuncoes[element.split("[")[0]],"") #erro aqui
+						args += "." + element
 				else:
 					if(regex.sub('',element) not in self.tabelaSimbolosVariaveis.keys()):
 						self.errors += "Linha " + str(ctx.start.line) + ": identificador " + identifier.getText() + " nao declarado\n"	
+					else:
+						stringFormatos += self.formatos.get(self.tabelaSimbolosVariaveis[element.split("[")[0]],"")
+						args += "." + element
 			self.visitIdentificador(identifier)
+			args = args.replace(".", "&", 1)
+			argumentos += args
+		self.codigo.append("scanf(\""+stringFormatos+"\""+argumentos+");\n")
+		print("scanf("+stringFormatos+argumentos+");")
 
 
 	# Visit a parse tree produced by laParser#cmdEscreva.
 	# gramática = cmdEscreva: 'escreva' '(' expr=expressao (',' naisExpr+=expressao)* ')';
 	def visitCmdEscreva(self, ctx:laParser.CmdEscrevaContext, isFunction = None):
+		stringFormatos = ""
+		argumentos = ""
 		for expression in ctx.expressao():
 			self.visitExpressao(expression, isFunction)
+			if(expression.getText()[0]=="\""):
+				stringFormatos += "%s"
+			else:
+				identificadores = expression.getText().split('.')
+				regex = re.compile(r'\[.*\]')
+				for element in identificadores:
+					if(isFunction != None):
+						identFunction = regex.sub('',element)
+						if(identFunction in self.tabelaSimbolosVariaveisFuncoes[isFunction].keys() or identFunction in self.tabelaSimbolosVariaveis.keys()):					
+							a=0#stringFormatos += self.formatos.get(self.tabelaSimbolosVariaveis[element],"")
+					else:
+						if(regex.sub('',element) in self.tabelaSimbolosVariaveis.keys()):
+							stringFormatos += self.formatos.get(self.tabelaSimbolosVariaveis[element],"")
+			argumentos += ", " + expression.getText()
+		self.codigo.append("printf(\""+stringFormatos+"\""+argumentos+");\n")
 
 
 	# Visit a parse tree produced by laParser#cmdSe.

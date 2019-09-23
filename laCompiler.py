@@ -47,3 +47,8 @@ if(semantic.errors):
 	saida_semantic.write("Fim da compilacao\n")
 	print(semantic.errors)
 	exit()
+else:
+	for linha in semantic.codigo:
+		saida.write(linha)
+		print(linha)
+	exit()
