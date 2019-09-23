@@ -18,7 +18,7 @@ class laSemantics(laVisitor):
 	}
 
 	formatos = {
-  		"literal": "%c",
+  		"literal": "%s",
   		"inteiro": "%d",
   		"real": "%f",
   		"logico": "%b"
@@ -123,13 +123,15 @@ class laSemantics(laVisitor):
 						print(identName)
 				else: #Se o identificador já tiver sido declarado, adiciona o erro à variável de erros
 					self.errors += "Linha " + str(ctx.identificador(i).start.line) + ": identificador " + identName + " ja declarado anteriormente\n"
-		#self.codigo.append(self.tipos[ctx.tipo().getText().replace("^", "")]+" "+identName+";")
 		if(v!=""):
 			if(v[0]!=","):
 				self.codigo.append(v+"\n")
 			else:
 				v.replace(",","",1)
-				self.codigo.append(self.tipos.get(ctx.tipo().getText().replace("^", ""),"")+" "+identName+";\n")
+				if(ctx.tipo().getText()=="literal"):
+					self.codigo.append(self.tipos.get(ctx.tipo().getText().replace("^", ""),"")+" "+identName+"[100];\n")
+				else:
+					self.codigo.append(self.tipos.get(ctx.tipo().getText().replace("^", ""),"")+" "+identName+";\n")
 		self.visitTipo(ctx.tipo())
 
 
@@ -323,7 +325,11 @@ class laSemantics(laVisitor):
 			self.visitIdentificador(identifier)
 			args = args.replace(".", "&", 1)
 			argumentos += args
-		self.codigo.append("scanf(\""+stringFormatos+"\""+argumentos+");\n")
+		if(stringFormatos=="%s"):
+			argumentos = argumentos.replace(", ", "", 1)
+			self.codigo.append("gets("+argumentos+");\n")
+		else:
+			self.codigo.append("scanf(\""+stringFormatos+"\""+argumentos+");\n")
 		print("scanf("+stringFormatos+argumentos+");")
 
 
@@ -354,6 +360,7 @@ class laSemantics(laVisitor):
 	# Visit a parse tree produced by laParser#cmdSe.
 	# gramática =  cmdSe: 'se' expressao 'entao' (comandos+=cmd)* ('senao' (maisComandos+=cmd)*)? 'fim_se';
 	def visitCmdSe(self, ctx:laParser.CmdSeContext, isFunction = None):
+		
 		self.visitExpressao(ctx.expressao(), isFunction)
 		for command in ctx.cmd():
 			self.visitCmd(command, isFunction)
