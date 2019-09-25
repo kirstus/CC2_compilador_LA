@@ -1,5 +1,9 @@
 # Compilador linguagem LA
 
+pré-requisitos
+- Python3
+- PIP
+
 Instalar o [ANTLR4](https://www.antlr.org/)
 
 Em particular para linux:
