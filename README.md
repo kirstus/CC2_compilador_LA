@@ -27,5 +27,5 @@ Para gerar os arquivos necessários a partir da gramática:
 
 Para rodar o corretor automático:
 
-`$ java -jar CorretorTrabalho1.jar "python /caminho/do/compilador_LA/laCompiler.py" "gcc" /caminho/da/pasta/de/saida/ /caminho/dos/casosDeTesteT1/ "RAs" tudo`
+`$ java -jar CorretorTrabalho1.jar "python /caminho/do/compilador_LA/laCompiler.py" "gcc" /caminho/da/pasta/de/saida/ /caminho/dos/casosDeTesteT1/ "619612, 619710, 619825, 628310" tudo`
 
