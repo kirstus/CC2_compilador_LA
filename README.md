@@ -1,9 +1,9 @@
 ## Compilador linguagem LA
-#Alunos
+--Alunos
   - Jéssica Antunes 619612
   - Nicholas Lopes 619710
   - Theodosio Banevicius 619825
-  - Matheus Kirstus
+  - Matheus Kirstus 628310
 
 pré-requisitos
 - Python3
